@@ -8,14 +8,14 @@ Prototype for TTB compliance agents: extract 7 fields from an alcohol-label phot
 them against submitted application data, flagging mismatches for human review.
 
 ## Current phase
-**Step 4 — Batch + $5 budget cap.** ◐ Code complete, build-verified, `/batch` renders in
-browser with no console errors. Batch engine (`lib/batch.ts`), `POST /api/batch` +
-`GET /api/batch/[id]`, batch UI, nav. **$5 Claude spend cap wired** (`lib/budget.ts`,
-`/api/budget`, 402 on exhaustion) — the user's "limit to 5" = DOLLARS not concurrency.
+**Step 5 — Security hardening.** ☑ Done & verified (headers present; rate limit → 429 +
+Retry-After at 21st request; bad upload → 400). Rate limiter, security headers, SECURITY.md.
 
-Done & verified (no key needed): Step 0 (scaffold), Step 2 (matcher 29/29).
+Done & verified (no key needed): Step 0, Step 2 (matcher 29/29), Step 5 (security).
 Code-complete, live run pending `ANTHROPIC_API_KEY`: Step 1 (extraction), Step 3 (review UI),
-Step 4 (batch). Next: Step 5 (security hardening — rate limit, headers, SECURITY.md).
+Step 4 (batch + $5 cap).
+Next: **Step 6 — README + deploy to Vercel** (deploy needs the user's Vercel login + the API key
+set in Vercel env; this is the final step and the point where the deferred live tests all run).
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

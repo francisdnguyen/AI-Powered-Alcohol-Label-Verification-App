@@ -35,9 +35,11 @@ batch UI with per-file live status + expandable field details; nav between singl
 "limit to 5" = dollars. Build-verified; `/batch` renders, no console errors.
 ⏳ Live batch run (needs key) DEFERRED.
 
-## Step 5 — Security hardening  ☐
-`lib/rateLimit.ts` (per-IP), MIME allowlist + size cap, free-text caps, security headers,
-`SECURITY.md` (STRIDE-style). Verify: rate limit → 429; bad upload → 400; no key in client bundle.
+## Step 5 — Security hardening  ☑
+`lib/rateLimit.ts` (per-IP, 20/10min) on all credit-spending routes; MIME allowlist + size cap;
+free-text caps; security headers in `next.config.ts`; `SECURITY.md` (STRIDE-style + accepted
+risks). Verified: headers present; 21st request → `429` + `Retry-After: 599`; bad upload → `400`;
+key server-only.
 
 ## Step 6 — Docs + deploy  ☐
 `README.md` (approach, tradeoffs, setup, measured latency, cloud-vs-firewall note), finalize

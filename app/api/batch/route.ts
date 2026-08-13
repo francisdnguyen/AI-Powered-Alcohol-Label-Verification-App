@@ -8,12 +8,21 @@ import {
 import { getApplication } from "@/lib/applications";
 import type { ApplicationData } from "@/lib/matcher";
 import { getBudgetStatus } from "@/lib/budget";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
 /** Start a batch analysis job. Returns a job id the client polls. */
 export async function POST(request: Request) {
+  const rl = checkRateLimit(getClientIp(request));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 60) } },
+    );
+  }
+
   if (getBudgetStatus().exhausted) {
     return NextResponse.json(
       { error: "The analysis budget has been reached; no new batches can run." },

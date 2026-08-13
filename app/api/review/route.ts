@@ -7,6 +7,7 @@ import {
   ExtractionError,
 } from "@/lib/anthropic";
 import { BudgetExceededError } from "@/lib/budget";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import {
   reviewLabel,
   type ApplicationData,
@@ -40,6 +41,14 @@ function readField(form: FormData, key: string): string | null | { tooLong: true
 
 export async function POST(request: Request) {
   const startedAt = Date.now();
+
+  const rl = checkRateLimit(getClientIp(request));
+  if (!rl.ok) {
+    return NextResponse.json(
+      { error: "Too many requests. Please wait a moment and try again." },
+      { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 60) } },
+    );
+  }
 
   let form: FormData;
   try {
