@@ -42,8 +42,9 @@ risks). Verified: headers present; 21st request → `429` + `Retry-After: 599`; 
 key server-only.
 
 ## Step 6 — Docs + deploy  ☐
-`README.md` (approach, tradeoffs, setup, measured latency, cloud-vs-firewall note), finalize
-STATE/ROADMAP, deploy to Vercel with `ANTHROPIC_API_KEY`. Verify: live URL does single + batch.
+`README.md` ☑ (approach, tradeoffs, setup, latency, cloud-vs-firewall note). ⏳ Deploy to Vercel
+with `ANTHROPIC_API_KEY` + run the deferred live tests — needs the user's Vercel login + key.
+Fill measured latency numbers into README after the first live run.
 
 ---
 
