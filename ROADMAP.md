@@ -9,10 +9,12 @@ Legend: ☐ not started · ◐ in progress · ☑ done
 Next.js 16 App Router scaffold, exact-pinned deps, pnpm freshness gate, `.env.example`,
 `STATE.md`, `ROADMAP.md`. Verified: `next build` green (TS passed), `next start` serves HTTP 200.
 
-## Step 1 — Extraction core  ☐
+## Step 1 — Extraction core  ◐
 `lib/schema.ts` (Zod, 7 fields + confidence/found), `lib/ttb.ts` (canonical warning),
 `lib/image.ts` (sharp normalize), `lib/anthropic.ts` (transcribe-only prompt),
-`POST /api/extract`. Verify: seed image → correct JSON; log per-stage latency.
+`POST /api/extract`. Code complete + build-verified. Synthetic ground-truth fixtures in
+`public/labels/`. ⏳ Live smoke test (seed image → JSON + latency) DEFERRED until
+`ANTHROPIC_API_KEY` is available.
 
 ## Step 2 — Deterministic matcher + tests  ☐
 `lib/matcher.ts` (tolerant fields, ABV tolerance, net-contents units, gov-warning verbatim,

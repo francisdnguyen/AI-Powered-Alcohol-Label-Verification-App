@@ -1,0 +1,20 @@
+{
+  "bourbon-750.png": {
+    "brandName": "SILVER CREEK",
+    "classType": "Kentucky Straight Bourbon Whiskey",
+    "alcoholContent": "40% ALC/VOL (80 PROOF)",
+    "netContents": "750 mL",
+    "producerNameAddress": "Distilled & Bottled by Silver Creek Distillers, Frankfort, KY",
+    "countryOfOrigin": "Product of USA",
+    "governmentWarning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  },
+  "cabernet-750.png": {
+    "brandName": "MERIDIAN RIDGE",
+    "classType": "Cabernet Sauvignon",
+    "alcoholContent": "13.5% ABV",
+    "netContents": "750 mL",
+    "producerNameAddress": "Produced & Bottled by Meridian Ridge Winery, Napa, CA",
+    "countryOfOrigin": "Made in USA",
+    "governmentWarning": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems."
+  }
+}
