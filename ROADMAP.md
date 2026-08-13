@@ -16,10 +16,10 @@ Next.js 16 App Router scaffold, exact-pinned deps, pnpm freshness gate, `.env.ex
 `public/labels/`. ⏳ Live smoke test (seed image → JSON + latency) DEFERRED until
 `ANTHROPIC_API_KEY` is available.
 
-## Step 2 — Deterministic matcher + tests  ☐
+## Step 2 — Deterministic matcher + tests  ☑
 `lib/matcher.ts` (tolerant fields, ABV tolerance, net-contents units, gov-warning verbatim,
-low-confidence→review) + `lib/applications.ts` (mock store) + `lib/matcher.test.ts` (vitest).
-Verify: `pnpm test` green.
+low-confidence→review, self-check mode) + `lib/applications.ts` (6 mock apps) +
+`lib/matcher.test.ts`. Verified: **29/29 vitest tests pass**, build typecheck clean.
 
 ## Step 3 — Single-label review UI  ☐
 `POST /api/review`; accessible page (3 input modes: mock app / manual / self-check),
