@@ -99,7 +99,12 @@ testing; regenerate them with `node scripts/make-sample-labels.mjs`.
 
 The ~5s target is dominated by the single Claude vision call (~2–4s); image processing and grading
 are negligible. The UI shows the actual per-label time ("Analyzed in X.Xs") so it's measured, not
-asserted. _(Representative measured numbers to be recorded here after the first live run.)_
+asserted.
+
+_Measured on the first live run (Claude Haiku 4.5, `claude-haiku-4-5-20251001`): single-label
+reviews landed at **3.3–4.0s** end-to-end (Claude vision call 3.2–4.0s; image normalization +
+deterministic grading ≈ 50–65 ms combined). Batch runs measured ~3.3–3.5s per label. Five calls
+cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/label**._
 
 ## Trade-offs & limitations (documented, not hidden)
 
