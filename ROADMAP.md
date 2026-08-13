@@ -28,9 +28,12 @@ low-confidence→review, self-check mode) + `lib/applications.ts` (6 mock apps) 
 verified in browser (semantics, dropdown, mode-switching, no console errors).
 ⏳ Live "Analyze" flow (needs key) DEFERRED.
 
-## Step 4 — Batch  ☐
-`POST /api/batch` (in-memory job, **concurrency pool = 5**) + `GET /api/batch/[id]`; batch UI
-with per-file status + summary. Verify: several labels resolve; pool caps at 5.
+## Step 4 — Batch + $5 budget cap  ◐
+`POST /api/batch` (in-memory job, bounded concurrency pool) + `GET /api/batch/[id]` polling;
+batch UI with per-file live status + expandable field details; nav between single/batch.
+**$5 Claude spend cap** (`lib/budget.ts`, `/api/budget`, HTTP 402 on exhaustion) — the user's
+"limit to 5" = dollars. Build-verified; `/batch` renders, no console errors.
+⏳ Live batch run (needs key) DEFERRED.
 
 ## Step 5 — Security hardening  ☐
 `lib/rateLimit.ts` (per-IP), MIME allowlist + size cap, free-text caps, security headers,

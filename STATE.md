@@ -8,14 +8,14 @@ Prototype for TTB compliance agents: extract 7 fields from an alcohol-label phot
 them against submitted application data, flagging mismatches for human review.
 
 ## Current phase
-**Step 3 — Single-label review UI.** ◐ Code complete, build-verified, and **UI verified in a
-browser** (landmarks/headings/labels correct, applications dropdown populated, mode-switching
-reveals the right inputs, no console errors). `/api/review` + `/api/applications` added.
-**Live "Analyze" flow DEFERRED** — needs `ANTHROPIC_API_KEY` (same blocker as Step 1).
+**Step 4 — Batch + $5 budget cap.** ◐ Code complete, build-verified, `/batch` renders in
+browser with no console errors. Batch engine (`lib/batch.ts`), `POST /api/batch` +
+`GET /api/batch/[id]`, batch UI, nav. **$5 Claude spend cap wired** (`lib/budget.ts`,
+`/api/budget`, 402 on exhaustion) — the user's "limit to 5" = DOLLARS not concurrency.
 
-Done & verified: Step 0 (scaffold), Step 2 (matcher, 29/29 tests).
-Code-complete, live test pending key: Step 1 (extraction), Step 3 (review UI).
-Next: Step 4 (batch, concurrency pool = 5) — flag the cap before building.
+Done & verified (no key needed): Step 0 (scaffold), Step 2 (matcher 29/29).
+Code-complete, live run pending `ANTHROPIC_API_KEY`: Step 1 (extraction), Step 3 (review UI),
+Step 4 (batch). Next: Step 5 (security hardening — rate limit, headers, SECURITY.md).
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
@@ -32,6 +32,11 @@ Next: Step 4 (batch, concurrency pool = 5) — flag the cap before building.
    photo cannot verify **bold** formatting — known, documented limit.
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
    not asserted.
+7. **Hard $5 spend cap on Claude usage** (`lib/budget.ts`, `ANALYSIS_BUDGET_USD`, default 5).
+   Every Claude call goes through `extractLabel`, which asserts budget before the call and
+   records exact cost from reported token usage (Haiku 4.5: $1/MTok in, $5/MTok out) after.
+   Exhaustion → HTTP 402. **This is the user's "limit to 5" instruction — DOLLARS, not
+   concurrency.** In-memory counter → per-instance on serverless, resets on restart (limitation).
 
 ## Toolchain / stack (pinned)
 - Runtime: Node 22.19.0. Package manager: **pnpm 11.20.0** via corepack (no global shim;

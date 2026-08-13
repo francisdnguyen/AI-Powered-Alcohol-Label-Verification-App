@@ -6,6 +6,7 @@ import {
   MissingApiKeyError,
   ExtractionError,
 } from "@/lib/anthropic";
+import { BudgetExceededError } from "@/lib/budget";
 import type { ExtractResponse } from "@/lib/schema";
 
 // sharp + the Anthropic SDK need the Node.js runtime (not Edge).
@@ -77,6 +78,9 @@ export async function POST(request: Request) {
     };
     return NextResponse.json(body);
   } catch (err) {
+    if (err instanceof BudgetExceededError) {
+      return NextResponse.json({ error: err.message }, { status: 402 });
+    }
     if (err instanceof MissingApiKeyError) {
       return NextResponse.json(
         { error: "Server is not configured with an API key." },

@@ -6,6 +6,7 @@ import {
   type ExtractedLabel,
 } from "./schema";
 import type { NormalizedImage } from "./image";
+import { assertBudgetAvailable, recordUsage } from "./budget";
 
 /** Pinned default; overridable via env so the model id is reproducible. */
 export const DEFAULT_MODEL = "claude-haiku-4-5-20251001";
@@ -101,6 +102,9 @@ export async function extractLabel(
   const anthropic = getClient();
   const model = getModel();
 
+  // Refuse before spending any more money once the $5 cap is hit.
+  assertBudgetAvailable();
+
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
     const message = await anthropic.messages.create({
@@ -136,6 +140,9 @@ export async function extractLabel(
         },
       ],
     });
+
+    // Record actual cost from reported token usage, regardless of parse outcome.
+    recordUsage(message.usage);
 
     const toolUse = message.content.find((block) => block.type === "tool_use");
     if (!toolUse || toolUse.type !== "tool_use") {
