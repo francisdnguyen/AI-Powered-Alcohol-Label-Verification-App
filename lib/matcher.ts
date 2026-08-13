@@ -3,9 +3,13 @@ import {
   LABEL_FIELDS,
   type Confidence,
   type ExtractedLabel,
+  type ExtractTiming,
   type LabelFieldKey,
 } from "./schema";
 import { TTB_GOVERNMENT_WARNING, TTB_WARNING_PREFIX } from "./ttb";
+
+/** How the label's expected values were supplied. */
+export type ReviewMode = "application" | "manual" | "self";
 
 /**
  * The deterministic grader. The vision model only transcribes; every match/mismatch
@@ -38,6 +42,16 @@ export interface ReviewResult {
   summary: ReviewSummary;
   /** "pass" only when every field cleanly matches; otherwise agent attention needed. */
   overall: "pass" | "attention";
+}
+
+/** Full payload returned by POST /api/review. */
+export interface ReviewResponse {
+  extracted: ExtractedLabel;
+  review: ReviewResult;
+  timing: ExtractTiming;
+  model: string;
+  mode: ReviewMode;
+  applicationId?: string;
 }
 
 /** Expected values from a submitted application. Government warning is NOT here —

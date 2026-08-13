@@ -8,11 +8,14 @@ Prototype for TTB compliance agents: extract 7 fields from an alcohol-label phot
 them against submitted application data, flagging mismatches for human review.
 
 ## Current phase
-**Step 2 — Deterministic matcher + tests.** ☑ Done & verified (29/29 vitest tests pass,
-build typecheck clean). No API key needed — pure logic.
-**Step 1 — Extraction core.** ◐ Code complete & build-verified. **Live extraction smoke test
-still DEFERRED** — needs `ANTHROPIC_API_KEY` in `.env.local` (user on phone; add at computer).
-Next: Step 3 (single-label review UI) — needs the live pipeline, so best paired with the key.
+**Step 3 — Single-label review UI.** ◐ Code complete, build-verified, and **UI verified in a
+browser** (landmarks/headings/labels correct, applications dropdown populated, mode-switching
+reveals the right inputs, no console errors). `/api/review` + `/api/applications` added.
+**Live "Analyze" flow DEFERRED** — needs `ANTHROPIC_API_KEY` (same blocker as Step 1).
+
+Done & verified: Step 0 (scaffold), Step 2 (matcher, 29/29 tests).
+Code-complete, live test pending key: Step 1 (extraction), Step 3 (review UI).
+Next: Step 4 (batch, concurrency pool = 5) — flag the cap before building.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

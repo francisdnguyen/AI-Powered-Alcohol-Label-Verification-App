@@ -21,10 +21,12 @@ Next.js 16 App Router scaffold, exact-pinned deps, pnpm freshness gate, `.env.ex
 low-confidence→review, self-check mode) + `lib/applications.ts` (6 mock apps) +
 `lib/matcher.test.ts`. Verified: **29/29 vitest tests pass**, build typecheck clean.
 
-## Step 3 — Single-label review UI  ☐
-`POST /api/review`; accessible page (3 input modes: mock app / manual / self-check),
-color-coded per-field result cards, "Analyzed in X.Xs", plain-language errors. WCAG-AA.
-Verify: full flow in browser < 5s.
+## Step 3 — Single-label review UI  ◐
+`POST /api/review` + `GET /api/applications`; accessible page (3 input modes: mock app / manual
+/ self-check), color-coded per-field result cards with text+symbol status (not color alone),
+"Analyzed in X.Xs", plain-language errors, focus management + aria-live. Build-verified; UI
+verified in browser (semantics, dropdown, mode-switching, no console errors).
+⏳ Live "Analyze" flow (needs key) DEFERRED.
 
 ## Step 4 — Batch  ☐
 `POST /api/batch` (in-memory job, **concurrency pool = 5**) + `GET /api/batch/[id]`; batch UI
