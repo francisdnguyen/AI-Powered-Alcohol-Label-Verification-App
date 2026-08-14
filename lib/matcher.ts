@@ -474,3 +474,46 @@ export function reviewLabel(
     overall: summary.match === summary.total ? "pass" : "attention",
   };
 }
+
+export type RecommendationLevel = "approve" | "review" | "reject";
+
+export interface RecommendationResult {
+  level: RecommendationLevel;
+  label: string;
+  reason: string;
+}
+
+/**
+ * Roll a field-by-field review up into a single agent-facing recommendation. A hard conflict or a
+ * missing mandatory field points to rejection; softer "needs review" flags route to a human; a
+ * clean sheet is ready to approve.
+ */
+export function recommendationFor(review: ReviewResult): RecommendationResult {
+  const s = review.summary;
+  if (s.mismatch > 0) {
+    return {
+      level: "reject",
+      label: "Likely rejection",
+      reason: `${s.mismatch} field${s.mismatch === 1 ? "" : "s"} conflict with the application.`,
+    };
+  }
+  if (s.missing > 0) {
+    return {
+      level: "reject",
+      label: "Likely rejection",
+      reason: `${s.missing} required field${s.missing === 1 ? "" : "s"} missing from the label.`,
+    };
+  }
+  if (s.review > 0) {
+    return {
+      level: "review",
+      label: "Needs agent review",
+      reason: `${s.review} field${s.review === 1 ? "" : "s"} need a closer look.`,
+    };
+  }
+  return {
+    level: "approve",
+    label: "Ready for approval",
+    reason: "All fields match the application.",
+  };
+}

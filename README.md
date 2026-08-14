@@ -1,8 +1,9 @@
-# TTB Label Verification
+# TTB Label Review Console
 
-A prototype that helps TTB compliance agents verify alcohol beverage labels against submitted
-application data. Upload a label photo; the app reads the seven required fields and flags anything
-that doesn't match the application, for the agent to review.
+A prototype that helps TTB compliance agents work a queue of alcohol label approvals. The home
+screen is a **review queue** of pending COLA applications; an agent opens one, sees the submitted
+filing next to the label, runs AI verification, gets a recommendation, and records a disposition —
+mirroring the real day-to-day workflow.
 
 Built for the AI-Powered Alcohol Label Verification take-home.
 
@@ -10,12 +11,19 @@ Built for the AI-Powered Alcohol Label Verification take-home.
 
 ## What it does
 
-1. **Extracts the seven fields** from a label photo — brand name, class/type designation, alcohol
+1. **Review queue (home)** — a searchable, filterable worklist of pending applications with status
+   tabs (Pending / Approved / Rejected / Needs info), priority flags, and stat tiles.
+2. **Per-application review** — open an item to see the submitted application data and its label
+   side-by-side, run AI verification, and get a rolled-up recommendation (Ready for approval /
+   Needs agent review / Likely rejection). Record a disposition (approve / request info / reject).
+3. **Extracts the seven fields** from the label — brand name, class/type designation, alcohol
    content, net contents, producer name & address, country of origin, and the government warning.
-2. **Grades them against the application** — deterministic, code-side comparison that flags
+4. **Grades them against the application** — deterministic, code-side comparison that flags
    mismatches, missing fields, and low-confidence reads for human judgment.
-3. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
-4. **Accessible UI** designed for non-technical agents across a range of tech comfort.
+5. **Custom check** (secondary) — an ad-hoc page to upload any label and verify it against an
+   application, manual values, or the label's own requirements.
+6. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
+7. **Accessible UI** designed for non-technical agents across a range of tech comfort.
 
 ## The core design decision
 

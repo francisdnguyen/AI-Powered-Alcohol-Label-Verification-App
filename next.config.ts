@@ -8,6 +8,13 @@ import type { NextConfig } from "next";
  * XSS risk is low here because React escapes all transcribed label text by default (it is never
  * rendered as HTML). A production build would move to nonce-based script-src.
  */
+// `next dev` uses eval() for React's dev-only debugging tooling, so allow 'unsafe-eval' in
+// development. Production never uses eval, so the shipped policy stays strict.
+const scriptSrc =
+  process.env.NODE_ENV === "production"
+    ? "script-src 'self' 'unsafe-inline'"
+    : "script-src 'self' 'unsafe-inline' 'unsafe-eval'";
+
 const csp = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -16,7 +23,7 @@ const csp = [
   "object-src 'none'",
   "img-src 'self' data: blob:",
   "style-src 'self' 'unsafe-inline'",
-  "script-src 'self' 'unsafe-inline'",
+  scriptSrc,
   "connect-src 'self'",
   "font-src 'self'",
 ].join("; ");

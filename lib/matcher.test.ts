@@ -6,6 +6,7 @@ import {
   parseAbv,
   parseVolumeMl,
   reviewLabel,
+  recommendationFor,
   type ApplicationData,
 } from "./matcher";
 import { TTB_GOVERNMENT_WARNING } from "./ttb";
@@ -266,6 +267,27 @@ describe("nuanced field matching", () => {
   it("flags a single likely OCR misread as review, not mismatch", () => {
     const r = reviewLabel(buildLabel({ brandName: field("Silver Creok") }), silverCreekApp);
     expect(statusOf(r, "brandName")).toBe("review");
+  });
+});
+
+// --- recommendation rollup -------------------------------------------------
+
+describe("recommendationFor", () => {
+  it("recommends approval when every field matches", () => {
+    const r = recommendationFor(reviewLabel(buildLabel(), silverCreekApp));
+    expect(r.level).toBe("approve");
+  });
+  it("recommends rejection on a hard mismatch", () => {
+    const review = reviewLabel(buildLabel({ alcoholContent: field("45% ALC/VOL") }), silverCreekApp);
+    expect(recommendationFor(review).level).toBe("reject");
+  });
+  it("recommends rejection when a mandatory field is missing", () => {
+    const review = reviewLabel(buildLabel({ governmentWarning: field(null) }), silverCreekApp);
+    expect(recommendationFor(review).level).toBe("reject");
+  });
+  it("routes to agent review on a soft flag", () => {
+    const review = reviewLabel(buildLabel({ brandName: field("Silver Creek Reserve") }), silverCreekApp);
+    expect(recommendationFor(review).level).toBe("review");
   });
 });
 

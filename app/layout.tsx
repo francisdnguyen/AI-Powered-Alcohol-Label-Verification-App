@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "TTB Label Verification",
+  title: "TTB Label Review Console",
   description:
-    "Verify alcohol beverage labels against application data — extract the seven required fields and flag mismatches for agent review.",
+    "Review queue for alcohol beverage label approvals — verify each submitted label against its application, extract the seven required fields, and record a disposition.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
@@ -29,15 +29,24 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           aria-label="Primary"
           className="border-b border-black/10 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-neutral-950/80"
         >
-          <div className="mx-auto flex w-full max-w-3xl items-center gap-1 px-4 py-3">
-            <span className="mr-3 font-semibold text-neutral-900 dark:text-neutral-100">
-              TTB Labels
-            </span>
+          <div className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 py-3">
+            <a
+              href="/"
+              className="mr-3 font-semibold text-neutral-900 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-100"
+            >
+              TTB Label Console
+            </a>
             <a
               href="/"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
-              Single review
+              Queue
+            </a>
+            <a
+              href="/custom"
+              className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            >
+              Custom check
             </a>
             <a
               href="/batch"

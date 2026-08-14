@@ -8,10 +8,17 @@ Prototype for TTB compliance agents: extract 7 fields from an alcohol-label phot
 them against submitted application data, flagging mismatches for human review.
 
 ## Current phase
-**Deployed & live-verified.** All steps 0–7 complete; live Claude calls verified locally and on
-Vercel (https://ai-powered-alcohol-label-verificati-ochre.vercel.app). Single-label review ~3–4s;
-extraction + deterministic grading confirmed against the sample labels. README latency section
-holds measured numbers.
+**Deployed & live-verified, now reframed as a review-queue console.** All steps 0–7 complete; live
+Claude calls verified locally and on Vercel. Single-label review ~3–4s.
+
+**UI redesign (queue console):** home (`app/page.tsx`) is now a worklist of 12 mock COLA
+applications (stat tiles, status tabs, search, priority) → `/review/[id]` shows the filing + label
+side-by-side, "Run AI verification" (POSTs the app's label to `/api/review`), a 3-tier
+recommendation (`recommendationFor` in `lib/matcher.ts`), and a disposition saved to localStorage
+(`lib/dispositions.ts`). The old upload flow moved to `/custom`; `/batch` unchanged. Each app has a
+generated label image (`scripts/make-sample-labels.mjs`, 12 labels, a few with intentional
+divergences). Verified end-to-end in-browser: queue → open → verify (caught the Costa Verde ABV
+mismatch → "Likely rejection") → reject → queue shows Actioned 1 / Rejected 1.
 
 **Batch upgraded (post-deploy):** raised to a 200–300-file capability via browser-side downscaling
 (`lib/imageClient.ts`) + client chunking into ≤20-file, <4.5 MB requests, merged into one progress
