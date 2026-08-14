@@ -8,17 +8,7 @@ import {
   DISPOSITION_LABEL,
   type Disposition,
 } from "@/lib/dispositions";
-
-interface QueueRow {
-  id: string;
-  ttbId: string;
-  brandName: string;
-  productName: string;
-  category: "Spirits" | "Wine" | "Beer";
-  classType: string;
-  alcoholContent: string;
-  priority: "high" | "normal";
-}
+import type { ApplicationSummary } from "@/lib/applications";
 
 type StatusFilter = "all" | Disposition;
 
@@ -32,17 +22,18 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
 
 export default function QueuePage() {
   const router = useRouter();
-  const [rows, setRows] = useState<QueueRow[]>([]);
+  const [rows, setRows] = useState<ApplicationSummary[]>([]);
   const [dispositions, setDispositions] = useState<Record<string, Disposition>>({});
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
 
   useEffect(() => {
     fetch("/api/applications")
       .then((r) => r.json())
-      .then((d: { applications?: QueueRow[] }) => setRows(d.applications ?? []))
-      .catch(() => {})
+      .then((d: { applications?: ApplicationSummary[] }) => setRows(d.applications ?? []))
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
   }, []);
 
@@ -78,7 +69,7 @@ export default function QueuePage() {
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return rows.filter((r) => {
+    const filtered = rows.filter((r) => {
       if (filter !== "all" && statusOf(r.id) !== filter) return false;
       if (!q) return true;
       return (
@@ -87,6 +78,13 @@ export default function QueuePage() {
         r.ttbId.toLowerCase().includes(q)
       );
     });
+    // Triage: float still-pending high-priority items to the top; otherwise keep queue order.
+    const rank = (r: ApplicationSummary) =>
+      r.priority === "high" && statusOf(r.id) === "pending" ? 0 : 1;
+    return filtered
+      .map((r, i) => ({ r, i }))
+      .sort((a, b) => rank(a.r) - rank(b.r) || a.i - b.i)
+      .map((x) => x.r);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, dispositions, filter, query]);
 
@@ -110,12 +108,12 @@ export default function QueuePage() {
       </section>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div role="tablist" aria-label="Filter by status" className="flex flex-wrap gap-1">
+        <div role="group" aria-label="Filter by status" className="flex flex-wrap gap-1">
           {STATUS_TABS.map((t) => (
             <button
               key={t.key}
-              role="tab"
-              aria-selected={filter === t.key}
+              type="button"
+              aria-pressed={filter === t.key}
               onClick={() => setFilter(t.key)}
               className={`rounded-full px-3 py-1.5 text-sm font-medium ${
                 filter === t.key
@@ -161,7 +159,11 @@ export default function QueuePage() {
             {!loading && visible.length === 0 && (
               <tr>
                 <td colSpan={5} className="px-4 py-10 text-center text-neutral-500">
-                  No applications match this view.
+                  {rows.length === 0
+                    ? loadError
+                      ? "Couldn't load the queue — please refresh."
+                      : "No applications in the queue."
+                    : "No applications match this view."}
                 </td>
               </tr>
             )}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import type { Application } from "@/lib/applications";
 import {
@@ -30,20 +30,34 @@ export function ReviewClient({ app }: { app: Application }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disposition, setDispositionState] = useState<Disposition>("pending");
+  const resultsRef = useRef<HTMLElement>(null);
 
+  // Reset per-application view state whenever the route's application changes (defensive: the
+  // shipped UI only navigates review → queue → review, but this keeps a future
+  // "next application" link from showing one app's results under another's header).
   useEffect(() => {
     setDispositionState(getDisposition(app.id));
+    setReview(null);
+    setError(null);
+    setLoading(false);
   }, [app.id]);
+
+  // Move focus to the results once a verification returns (helps keyboard/low-vision users).
+  useEffect(() => {
+    if (review) resultsRef.current?.focus();
+  }, [review]);
 
   async function runVerification() {
     setLoading(true);
     setError(null);
     setReview(null);
     try {
-      const blob = await fetch(app.labelImage).then((r) => {
-        if (!r.ok) throw new Error("Could not load the label image.");
-        return r.blob();
-      });
+      const imgRes = await fetch(app.labelImage);
+      if (!imgRes.ok) {
+        setError("Could not load the label image for this application.");
+        return;
+      }
+      const blob = await imgRes.blob();
       const file = new File([blob], app.labelImage.split("/").pop() ?? "label.png", {
         type: blob.type || "image/png",
       });
@@ -66,7 +80,7 @@ export function ReviewClient({ app }: { app: Application }) {
     }
   }
 
-  function disposition_(value: Disposition) {
+  function applyDisposition(value: Disposition) {
     setDisposition(app.id, value);
     setDispositionState(value);
   }
@@ -159,7 +173,7 @@ export function ReviewClient({ app }: { app: Application }) {
         )}
 
         {review && rec && (
-          <section aria-labelledby="results">
+          <section aria-labelledby="results" ref={resultsRef} tabIndex={-1} className="focus:outline-none">
             <RecommendationBanner rec={rec} />
 
             <h2 id="results" className="mt-6 mb-3 text-xl font-bold text-neutral-900 dark:text-neutral-50">
@@ -189,26 +203,26 @@ export function ReviewClient({ app }: { app: Application }) {
               </p>
               <div className="flex flex-wrap gap-3">
                 <button
-                  onClick={() => disposition_("approved")}
+                  onClick={() => applyDisposition("approved")}
                   className="rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-green-500"
                 >
                   ✓ Approve
                 </button>
                 <button
-                  onClick={() => disposition_("needs-info")}
+                  onClick={() => applyDisposition("needs-info")}
                   className="rounded-lg bg-amber-500 px-4 py-2 text-sm font-semibold text-black hover:bg-amber-600 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-500"
                 >
                   Request info
                 </button>
                 <button
-                  onClick={() => disposition_("rejected")}
+                  onClick={() => applyDisposition("rejected")}
                   className="rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white hover:bg-red-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
                 >
                   ✕ Reject
                 </button>
                 {disposition !== "pending" && (
                   <button
-                    onClick={() => disposition_("pending")}
+                    onClick={() => applyDisposition("pending")}
                     className="rounded-lg px-4 py-2 text-sm font-medium text-neutral-600 hover:bg-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
                   >
                     Reset to pending

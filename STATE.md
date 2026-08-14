@@ -83,11 +83,15 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
 ## Key files
 - Config: `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.ts`
   (security headers + CSP), `postcss.config.mjs`, `eslint.config.mjs`, `.env.example`.
-- Lib: `lib/anthropic.ts` (Claude vision transcription), `lib/matcher.ts` (+ `matcher.test.ts`),
-  `lib/image.ts` (server prep/tiling), `lib/imageClient.ts` (browser downscale + chunk),
-  `lib/batch.ts`, `lib/rateLimit.ts`, `lib/applications.ts`, `lib/ttb.ts`, `lib/schema.ts`.
-- App: `app/page.tsx` (single review), `app/batch/page.tsx`, `app/layout.tsx`, `app/globals.css`,
-  API routes `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`.
+- Lib: `lib/anthropic.ts` (Claude vision transcription), `lib/matcher.ts` (grading +
+  `recommendationFor`; `+ matcher.test.ts`), `lib/image.ts` (server prep/tiling),
+  `lib/imageClient.ts` (browser downscale + chunk), `lib/batch.ts`, `lib/rateLimit.ts`,
+  `lib/applications.ts` (12 mock COLA apps + queue metadata), `lib/dispositions.ts` (localStorage
+  agent decisions; `+ dispositions.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
+- App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
+  the per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
+  `app/batch/page.tsx`, `app/layout.tsx`, `app/globals.css`, API routes
+  `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`.
 - Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, this file.
 
 ## Open threads

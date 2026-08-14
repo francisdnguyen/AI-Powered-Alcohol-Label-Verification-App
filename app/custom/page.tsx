@@ -4,13 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ReviewMode, ReviewResponse } from "@/lib/matcher";
 import { downscaleImage } from "@/lib/imageClient";
 import { FieldResultCard } from "@/components/FieldResultCard";
-
-interface AppSummary {
-  id: string;
-  ttbId: string;
-  brandName: string;
-  classType: string;
-}
+import type { ApplicationSummary } from "@/lib/applications";
 
 const MANUAL_FIELDS = [
   { key: "brandName", label: "Brand name" },
@@ -26,7 +20,7 @@ export default function Home() {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const [mode, setMode] = useState<ReviewMode>("application");
-  const [applications, setApplications] = useState<AppSummary[]>([]);
+  const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [applicationId, setApplicationId] = useState("");
   const [manual, setManual] = useState<Record<string, string>>({});
   const [loading, setLoading] = useState(false);
@@ -37,7 +31,7 @@ export default function Home() {
   useEffect(() => {
     fetch("/api/applications")
       .then((r) => r.json())
-      .then((d: { applications?: AppSummary[] }) => {
+      .then((d: { applications?: ApplicationSummary[] }) => {
         setApplications(d.applications ?? []);
         if (d.applications?.[0]) setApplicationId(d.applications[0].id);
       })

@@ -19,7 +19,12 @@ export function loadDispositions(): Record<string, Disposition> {
   if (typeof window === "undefined") return {};
   try {
     const raw = window.localStorage.getItem(KEY);
-    return raw ? (JSON.parse(raw) as Record<string, Disposition>) : {};
+    if (!raw) return {};
+    const parsed: unknown = JSON.parse(raw);
+    // Guard against corrupt/tampered storage (a JSON primitive or array): callers assign into
+    // this object, which would throw on a non-object. Self-heal to an empty map instead.
+    if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
+    return parsed as Record<string, Disposition>;
   } catch {
     return {};
   }

@@ -4,13 +4,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BatchFileResult } from "@/lib/batch";
 import { downscaleImage, chunkFiles } from "@/lib/imageClient";
 import { FieldResultCard } from "@/components/FieldResultCard";
-
-interface AppSummary {
-  id: string;
-  ttbId: string;
-  brandName: string;
-  classType: string;
-}
+import type { ApplicationSummary } from "@/lib/applications";
 
 type BatchMode = "self" | "application";
 
@@ -45,7 +39,7 @@ async function mapPool<T, R>(
 export default function BatchPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [mode, setMode] = useState<BatchMode>("self");
-  const [applications, setApplications] = useState<AppSummary[]>([]);
+  const [applications, setApplications] = useState<ApplicationSummary[]>([]);
   const [applicationId, setApplicationId] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -57,7 +51,7 @@ export default function BatchPage() {
   useEffect(() => {
     fetch("/api/applications")
       .then((r) => r.json())
-      .then((d: { applications?: AppSummary[] }) => {
+      .then((d: { applications?: ApplicationSummary[] }) => {
         setApplications(d.applications ?? []);
         if (d.applications?.[0]) setApplicationId(d.applications[0].id);
       })
