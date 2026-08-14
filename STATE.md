@@ -8,14 +8,15 @@ Prototype for TTB compliance agents: extract 7 fields from an alcohol-label phot
 them against submitted application data, flagging mismatches for human review.
 
 ## Current phase
-**Step 5 — Security hardening.** ☑ Done & verified (headers present; rate limit → 429 +
-Retry-After at 21st request; bad upload → 400). Rate limiter, security headers, SECURITY.md.
+**Deployed & live-verified.** All steps 0–7 complete; live Claude calls verified locally and on
+Vercel (https://ai-powered-alcohol-label-verificati-ochre.vercel.app). Single-label review ~3–4s;
+extraction + deterministic grading confirmed against the sample labels. README latency section
+holds measured numbers.
 
-Done & verified (no key needed): Step 0, Step 2 (matcher 29/29), Step 5 (security).
-Code-complete, live run pending `ANTHROPIC_API_KEY`: Step 1 (extraction), Step 3 (review UI),
-Step 4 (batch + $5 cap).
-Next: **Step 6 — README + deploy to Vercel** (deploy needs the user's Vercel login + the API key
-set in Vercel env; this is the final step and the point where the deferred live tests all run).
+**Batch upgraded (post-deploy):** raised to a 200–300-file capability via browser-side downscaling
+(`lib/imageClient.ts`) + client chunking into ≤20-file, <4.5 MB requests, merged into one progress
+bar; each chunk kept alive past the response with `waitUntil()` (`@vercel/functions`). Verified
+end-to-end locally: 25 files → 2 chunks (20+5) → 25/25 done in ~24s, 0 errors.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
@@ -27,7 +28,14 @@ set in Vercel env; this is the final step and the point where the deferred live 
 3. **The browser is untrusted.** Every `/api/*` route validates input with Zod, enforces a MIME
    allowlist + size cap on uploads, and caps free-text length.
 4. **State lives in-memory** (`Map`) for the prototype — mock applications and batch jobs reset
-   on process restart / serverless cold start. Documented limitation, not a bug.
+   on process restart / serverless cold start. Documented limitation, not a bug. Batch chunks now
+   survive the HTTP response via `waitUntil()`, but the job store is still per-instance, so a poll
+   can miss a job on a recycled instance (UI gives up after ~15 misses and flags those files).
+   Full durability = a shared store (Vercel KV / Postgres).
+4a. **Batch = client-chunked.** `MAX_BATCH_FILES` (20) is the PER-REQUEST cap; the browser splits a
+   large upload into chunks and merges results. Whole-batch total (300) is enforced client-side.
+   Per-chunk sizing is bounded by the ~4.5 MB body limit and the measured ~1.19s/label throughput
+   under the 60s function limit.
 5. **Government warning is matched verbatim** (strict); other fields tolerant-normalized. A
    photo cannot verify **bold** formatting — known, documented limit.
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
@@ -44,6 +52,8 @@ set in Vercel env; this is the final step and the point where the deferred live 
 - Framework: Next.js **16.3.0** (App Router) + React 19.2.8 + TypeScript **5.9.3**
   (chose proven TS 5.9.3 over the new TS 7 native compiler for reliability).
 - AI: `@anthropic-ai/sdk` **0.115.0**, Claude Haiku 4.5 vision.
+- Serverless helpers: `@vercel/functions` **3.8.0** (`waitUntil` for batch chunk survival; pinned
+  to 3.8.0 because 3.9.x was <7 days old and failed the freshness gate).
 - Validation: zod 4.4.3. Image: sharp 0.35.3. Tests: vitest 4.1.10. Styling: tailwindcss 4.3.3.
 - All deps pinned to EXACT versions (`save-exact=true`). Supply-chain gate:
   `minimumReleaseAge: 10080` (7 days) + `minimumReleaseAgeStrict: true` in

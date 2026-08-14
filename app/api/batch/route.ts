@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { waitUntil } from "@vercel/functions";
 import { ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/image";
 import {
   createJob,
@@ -98,6 +99,9 @@ export async function POST(request: Request) {
     inputs.push({ buffer: Buffer.from(await f.arrayBuffer()), filename: f.name });
   }
 
-  const job = createJob(inputs, mode, expected, applicationId);
+  const { job, processing } = createJob(inputs, mode, expected, applicationId);
+  // Keep the serverless function alive until this chunk finishes grading. Off-Vercel this is a
+  // safe no-op and processing runs to completion on the long-lived server anyway.
+  waitUntil(processing);
   return NextResponse.json({ jobId: job.id, total: job.total });
 }

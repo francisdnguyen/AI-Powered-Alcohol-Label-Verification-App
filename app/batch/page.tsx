@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BatchFileResult, BatchJob } from "@/lib/batch";
+import { downscaleImage, chunkFiles } from "@/lib/imageClient";
 import { FieldResultCard } from "@/components/FieldResultCard";
 
 interface AppSummary {
@@ -13,6 +14,44 @@ interface AppSummary {
 
 type BatchMode = "self" | "application";
 
+/** Whole-batch cap (top of the stakeholders' 200-300 ask). Enforced here on the client. */
+const MAX_TOTAL_FILES = 300;
+/** Per-chunk byte budget — kept under Vercel's ~4.5 MB request-body limit with margin. */
+const CHUNK_MAX_BYTES = 3.6 * 1024 * 1024;
+/** Per-chunk file cap — must match the server's MAX_BATCH_FILES (20). */
+const CHUNK_MAX_COUNT = 20;
+/** How many chunk POSTs are in flight at once — paces the per-IP rate limit and Claude fan-out. */
+const CHUNK_CONCURRENCY = 3;
+/** Give up on a chunk whose job we can't find after this many polls (~cross-instance recycle). */
+const MAX_POLL_MISSES = 15;
+
+/** Run `worker` over items with at most `limit` in flight; returns results in order. */
+async function mapPool<T, R>(
+  items: T[],
+  limit: number,
+  worker: (item: T, index: number) => Promise<R>,
+): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let cursor = 0;
+  await Promise.all(
+    Array.from({ length: Math.min(limit, items.length) }, async () => {
+      while (cursor < items.length) {
+        const i = cursor++;
+        out[i] = await worker(items[i], i);
+      }
+    }),
+  );
+  return out;
+}
+
+interface ChunkRef {
+  jobId: string;
+  offset: number;
+  count: number;
+  done: boolean;
+  misses: number;
+}
+
 export default function BatchPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [mode, setMode] = useState<BatchMode>("self");
@@ -20,8 +59,12 @@ export default function BatchPage() {
   const [applicationId, setApplicationId] = useState("");
   const [running, setRunning] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [job, setJob] = useState<BatchJob | null>(null);
+  const [prep, setPrep] = useState<string | null>(null);
+  const [results, setResults] = useState<BatchFileResult[]>([]);
+  const [total, setTotal] = useState(0);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const resultsRef = useRef<BatchFileResult[]>([]);
+  const chunksRef = useRef<ChunkRef[]>([]);
 
   useEffect(() => {
     fetch("/api/applications")
@@ -36,25 +79,52 @@ export default function BatchPage() {
     };
   }, []);
 
-  function poll(jobId: string) {
+  /** Mark a whole chunk's files as errored (upload failed or job lost) and re-render. */
+  function markChunkError(offset: number, count: number, message: string) {
+    for (let i = 0; i < count; i++) {
+      resultsRef.current[offset + i] = {
+        index: offset + i,
+        filename: resultsRef.current[offset + i]?.filename ?? "",
+        status: "error",
+        error: message,
+      };
+    }
+    setResults(resultsRef.current.slice());
+  }
+
+  /** Poll every outstanding chunk job, merging per-file results into one global list. */
+  function pollAll() {
     if (pollRef.current) clearInterval(pollRef.current);
     pollRef.current = setInterval(async () => {
-      try {
-        const res = await fetch(`/api/batch/${jobId}`);
-        const data = await res.json();
-        if (!res.ok) {
-          setError(data.error || "Lost track of the batch.");
-          if (pollRef.current) clearInterval(pollRef.current);
-          setRunning(false);
-          return;
-        }
-        setJob(data as BatchJob);
-        if ((data as BatchJob).done) {
-          if (pollRef.current) clearInterval(pollRef.current);
-          setRunning(false);
-        }
-      } catch {
-        // transient; keep polling
+      const active = chunksRef.current.filter((c) => !c.done);
+      await Promise.all(
+        active.map(async (c) => {
+          try {
+            const res = await fetch(`/api/batch/${c.jobId}`);
+            if (!res.ok) {
+              // A 404 on Vercel can mean the job's instance was recycled (in-memory store).
+              if (++c.misses >= MAX_POLL_MISSES) {
+                markChunkError(c.offset, c.count, "Lost track of this batch (server instance recycled).");
+                c.done = true;
+              }
+              return;
+            }
+            c.misses = 0;
+            const data = (await res.json()) as BatchJob;
+            for (const f of data.files) {
+              resultsRef.current[c.offset + f.index] = { ...f, index: c.offset + f.index };
+            }
+            if (data.done) c.done = true;
+          } catch {
+            // transient network error; keep polling
+          }
+        }),
+      );
+      setResults(resultsRef.current.slice());
+      if (chunksRef.current.every((c) => c.done)) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        pollRef.current = null;
+        setRunning(false);
       }
     }, 1200);
   }
@@ -65,33 +135,83 @@ export default function BatchPage() {
       setError("Add at least one label photo.");
       return;
     }
+    if (files.length > MAX_TOTAL_FILES) {
+      setError(`Please upload at most ${MAX_TOTAL_FILES} files at once.`);
+      return;
+    }
     setRunning(true);
     setError(null);
-    setJob(null);
-
-    const fd = new FormData();
-    for (const f of files) fd.append("images", f);
-    fd.append("mode", mode);
-    if (mode === "application") fd.append("applicationId", applicationId);
+    setResults([]);
+    setTotal(0);
+    if (pollRef.current) clearInterval(pollRef.current);
+    chunksRef.current = [];
 
     try {
-      const res = await fetch("/api/batch", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error || "Could not start the batch.");
+      // 1. Shrink images in the browser so large photos fit the request-body limit.
+      setPrep(`Preparing ${files.length} image${files.length === 1 ? "" : "s"}…`);
+      const prepared = await mapPool(files, 4, downscaleImage);
+
+      // 2. Split into request-sized chunks and seed the merged results list.
+      const chunks = chunkFiles(prepared, CHUNK_MAX_BYTES, CHUNK_MAX_COUNT);
+      resultsRef.current = prepared.map((f, i) => ({
+        index: i,
+        filename: f.name,
+        status: "pending",
+      }));
+      setResults(resultsRef.current.slice());
+      setTotal(prepared.length);
+
+      // 3. POST each chunk (bounded concurrency), recording where its files land globally.
+      let offset = 0;
+      const descriptors = chunks.map((c) => {
+        const d = { files: c, offset };
+        offset += c.length;
+        return d;
+      });
+      setPrep(`Uploading ${chunks.length} batch${chunks.length === 1 ? "" : "es"}…`);
+
+      await mapPool(descriptors, CHUNK_CONCURRENCY, async (d) => {
+        const fd = new FormData();
+        for (const f of d.files) fd.append("images", f);
+        fd.append("mode", mode);
+        if (mode === "application") fd.append("applicationId", applicationId);
+        try {
+          const res = await fetch("/api/batch", { method: "POST", body: fd });
+          const data = await res.json();
+          if (!res.ok) {
+            markChunkError(d.offset, d.files.length, data.error || `Upload failed (${res.status}).`);
+            return;
+          }
+          chunksRef.current.push({
+            jobId: data.jobId as string,
+            offset: d.offset,
+            count: d.files.length,
+            done: false,
+            misses: 0,
+          });
+        } catch {
+          markChunkError(d.offset, d.files.length, "Could not reach the server.");
+        }
+      });
+
+      setPrep(null);
+
+      if (chunksRef.current.length === 0) {
         setRunning(false);
+        setError("None of the batches could be started. Please try again in a moment.");
         return;
       }
-      poll(data.jobId as string);
+      pollAll();
     } catch {
-      setError("Could not reach the server.");
+      setPrep(null);
       setRunning(false);
+      setError("Something went wrong preparing the batch.");
     }
   }
 
-  const doneCount = job
-    ? job.files.filter((f) => f.status === "done" || f.status === "error").length
-    : 0;
+  const doneCount = results.filter(
+    (f) => f.status === "done" || f.status === "error",
+  ).length;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
@@ -117,7 +237,8 @@ export default function BatchPage() {
               multiple
               className="sr-only"
               onChange={(e) => {
-                setJob(null);
+                setResults([]);
+                setTotal(0);
                 setError(null);
                 setFiles(Array.from(e.target.files ?? []));
               }}
@@ -125,10 +246,10 @@ export default function BatchPage() {
             <span className="text-base font-medium text-neutral-800 dark:text-neutral-100">
               {files.length > 0
                 ? `${files.length} file${files.length === 1 ? "" : "s"} selected — choose again to replace`
-                : "Tap to choose photos (up to 25)"}
+                : `Tap to choose photos (up to ${MAX_TOTAL_FILES})`}
             </span>
             <span className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
-              JPEG, PNG, or WebP · up to 8 MB each
+              JPEG, PNG, or WebP · large photos are shrunk automatically before upload
             </span>
           </label>
         </section>
@@ -206,6 +327,10 @@ export default function BatchPage() {
       </form>
 
       <div className="mt-10" aria-live="polite">
+        {prep && (
+          <p className="mb-4 text-sm font-medium text-neutral-600 dark:text-neutral-300">{prep}</p>
+        )}
+
         {error && (
           <div role="alert" className="rounded-xl border border-red-300 bg-red-50 p-4 text-red-900 dark:border-red-800 dark:bg-red-950/50 dark:text-red-200">
             <p className="font-semibold">We hit a problem</p>
@@ -213,18 +338,18 @@ export default function BatchPage() {
           </div>
         )}
 
-        {job && (
+        {results.length > 0 && (
           <section aria-labelledby="b-results">
             <div className="flex items-baseline justify-between">
               <h2 id="b-results" className="text-2xl font-bold text-neutral-900 dark:text-neutral-50">
                 Results
               </h2>
               <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                {doneCount} of {job.total} done
+                {doneCount} of {total} done
               </p>
             </div>
             <ul className="mt-4 space-y-3">
-              {job.files.map((f) => (
+              {results.map((f) => (
                 <BatchRow key={f.index} file={f} />
               ))}
             </ul>

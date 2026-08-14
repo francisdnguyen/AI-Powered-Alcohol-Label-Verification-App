@@ -11,17 +11,18 @@ import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher"
 export const BATCH_CONCURRENCY = 4;
 
 /**
- * Upper bound on files per batch. Sized to the serverless execution model, not an arbitrary
- * number. The batch route runs with `maxDuration = 60s`; a measured local sweep at
- * BATCH_CONCURRENCY=4 came out almost perfectly linear at ~1.19s of wall-time per label
- * (40 -> 46.9s, 56 -> 65.1s, 72 -> 84.9s), so total time crosses the 60s function ceiling at
- * ~50 labels. 40 leaves ~13s of headroom for cold start and upload; 56 was measured to blow
- * past 60s (on Vercel that batch would be killed mid-run). Stakeholders asked for 200-300 at
- * once; reaching that reliably needs the production path (a durable queue + Vercel KV job store
- * + a background worker that survives the HTTP response) rather than a larger constant here --
- * see the fire-and-forget NOTE on processJob below and the in-memory-state limitation in README.
+ * Upper bound on files per *request*. This is the per-chunk cap, not the whole-batch cap:
+ * to reach the stakeholders' 200-300 target the client splits a large upload into chunks and
+ * POSTs each separately (see app/batch/page.tsx), because Vercel caps a request body at ~4.5MB
+ * and a serverless function at `maxDuration = 60s`. A measured local sweep at BATCH_CONCURRENCY=4
+ * was almost perfectly linear at ~1.19s of wall-time per label (40 -> 46.9s, 56 -> 65.1s,
+ * 72 -> 84.9s), so ~50 labels in one request already crosses the 60s ceiling. 20 per chunk clears
+ * in ~24s with comfortable headroom for cold start + upload, and keeps the total chunk count for a
+ * 300-file batch under the per-IP rate limit (20 POSTs / 10 min). The whole-batch total (300) is
+ * enforced client-side. Full durability across serverless instances still needs a shared job store
+ * (Vercel KV / Postgres) -- see the waitUntil note on createJob and the README limitation.
  */
-export const MAX_BATCH_FILES = 40;
+export const MAX_BATCH_FILES = 20;
 
 export type BatchFileStatus = "pending" | "processing" | "done" | "error";
 
@@ -77,12 +78,23 @@ export interface BatchInput {
   filename: string;
 }
 
+export interface CreatedJob {
+  job: BatchJob;
+  /**
+   * The background processing promise. The route hands this to `waitUntil()` so Vercel keeps the
+   * function alive until every label in the chunk is graded, instead of freezing it the instant
+   * the HTTP response flushes. Resolves when the job is done (it never rejects; per-file errors are
+   * captured on each file result).
+   */
+  processing: Promise<void>;
+}
+
 export function createJob(
   inputs: BatchInput[],
   mode: "self" | "application",
   expected: ApplicationData | null,
   applicationId?: string,
-): BatchJob {
+): CreatedJob {
   // Keep the store bounded: drop the oldest jobs beyond a small cap.
   if (jobs.size > 50) {
     const oldest = [...jobs.values()].sort((a, b) => a.createdAt - b.createdAt)[0];
@@ -105,12 +117,13 @@ export function createJob(
   };
   jobs.set(id, job);
 
-  // Fire-and-forget processing; the client polls GET /api/batch/[id] for progress.
-  // NOTE (serverless): on Vercel this needs the instance to stay warm or a
-  // waitUntil wrapper — see STATE.md / SECURITY.md. Works as-is on a long-lived server.
-  void processJob(job, inputs, expected);
+  // Kick off processing and hand the promise back so the route can wrap it in waitUntil().
+  // The client polls GET /api/batch/[id] for progress. On a long-lived server this runs to
+  // completion on its own; on Vercel, waitUntil() is what keeps the function from freezing the
+  // instant the response flushes. Cross-instance durability still needs a shared store (KV).
+  const processing = processJob(job, inputs, expected);
 
-  return job;
+  return { job, processing };
 }
 
 async function processJob(

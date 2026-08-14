@@ -119,23 +119,25 @@ cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/labe
 - **In-memory state.** Mock applications, batch jobs, the budget counter, and rate-limit counters
   live in memory — they reset on restart and are per-instance on serverless. Production would use a
   durable store (Vercel KV / Postgres).
-- **Batch capacity (40/run) vs. the 200–300 ask.** Compliance staff asked to process 200–300
-  applications at once. The prototype caps a batch at **40 files**, a number picked from a measured
-  sweep rather than a guess: batch processing scales almost perfectly linearly at **~1.19s of
-  wall-time per label** under the 4-way concurrency pool (40 → 46.9s, 56 → 65.1s, 72 → 84.9s), so
-  total time crosses the batch route's **60-second serverless function limit at ~50 labels**. 40
-  finishes in ~47s with ~13s of headroom for cold start and upload; 56 was measured to exceed 60s,
-  which on Vercel means the function is killed mid-run and the tail of the batch is lost. The cap is
-  a deliberate bound, not the number that matters — because processing is fire-and-forget after the
-  HTTP response and the job store is in-memory, a large batch is also not yet durable across
-  serverless instances. Reaching 200–300 reliably is a production change, not a bigger constant: a
-  durable queue with a Vercel KV / Postgres job store and a background worker (`waitUntil`/`after()`,
-  or a dedicated worker) that survives the response and checkpoints per-label progress. At
-  ~$0.007/label a 300-label batch is also ~$2.10, so the spend cap would need to be sized
+- **Batch capacity: up to 300 via client-side chunking.** Compliance staff asked to process 200–300
+  applications at once. Two hard Vercel limits make a single giant request impossible — a ~4.5 MB
+  request-body cap and a 60-second function limit (a measured sweep showed batch throughput is
+  almost perfectly linear at **~1.19s of wall-time per label** at concurrency 4, so ~50 labels in
+  one request already exceeds 60s). The app works around both: the browser **downscales each photo**
+  (~1280px JPEG, `lib/imageClient.ts`) then **splits the upload into ≤20-file, <4.5 MB chunks**,
+  POSTs them a few at a time, and **merges the per-file results into one progress bar**. Each chunk
+  is its own serverless invocation with its own 60s budget (a 20-file chunk clears in ~24s,
+  verified), so the work scales horizontally. `waitUntil()` (`@vercel/functions`) keeps each chunk
+  alive past the HTTP response so Vercel doesn't freeze it mid-run. Honest remaining limits: the job
+  store is still in-memory, so on Vercel a poll can hit an instance that never saw the job (the UI
+  gives up gracefully after a few misses and flags those files) — full durability needs a shared
+  store (Vercel KV / Postgres); and the per-IP rate limit (20 POSTs/10 min) caps a single window to
+  ~20 chunks. At ~$0.007/label a 300-label batch is ~$2.10, so the $5 spend cap would be sized
   accordingly.
 - **Bold typeface** on the government warning can't be verified from a transcription (text and caps
   can).
-- **No client-side image compression** yet — a photo over ~4.5 MB can hit Vercel's body limit.
+- **Single-label uploads over ~4.5 MB** can still hit Vercel's request-body limit (the batch path
+  downscales in the browser, but the single-label review route sends the original image).
 - **No authentication** — this is an internal review prototype, not a multi-tenant system.
 
 ## Deploying to Vercel
