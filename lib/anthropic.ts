@@ -92,18 +92,32 @@ const toolInputSchema = {
 };
 
 /**
- * Send a normalized image to Claude Haiku vision and return the seven transcribed
- * fields, Zod-validated. Forces a single tool call for structured output; retries
- * once if the model's output fails schema validation, then gives up cleanly.
+ * Send one or more normalized images to Claude Haiku vision and return the seven transcribed
+ * fields, Zod-validated. Multiple images are overlapping sections of the SAME label (large photos
+ * are tiled top-to-bottom in lib/image.ts) — they are transcribed together as one label. Forces a
+ * single tool call for structured output; retries once if the output fails schema validation.
  */
 export async function extractLabel(
-  image: NormalizedImage,
+  images: NormalizedImage[],
 ): Promise<ExtractedLabel> {
   const anthropic = getClient();
   const model = getModel();
 
   // Refuse before spending any more money once the $5 cap is hit.
   assertBudgetAvailable();
+
+  const imageBlocks = images.map((img) => ({
+    type: "image" as const,
+    source: {
+      type: "base64" as const,
+      media_type: img.mediaType,
+      data: img.base64,
+    },
+  }));
+  const instruction =
+    images.length > 1
+      ? `This label is shown as ${images.length} overlapping sections of the SAME image, ordered top to bottom. Read them together as one label and transcribe the seven fields.`
+      : "Transcribe the seven label fields from this image.";
 
   let lastError: unknown;
   for (let attempt = 0; attempt < 2; attempt++) {
@@ -123,20 +137,7 @@ export async function extractLabel(
       messages: [
         {
           role: "user",
-          content: [
-            {
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: image.mediaType,
-                data: image.base64,
-              },
-            },
-            {
-              type: "text",
-              text: "Transcribe the seven label fields from this image.",
-            },
-          ],
+          content: [...imageBlocks, { type: "text", text: instruction }],
         },
       ],
     });

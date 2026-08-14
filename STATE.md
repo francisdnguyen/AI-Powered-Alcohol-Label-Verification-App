@@ -18,7 +18,18 @@ holds measured numbers.
 bar. Each chunk is analyzed **synchronously inside its POST** (results returned inline; no job store,
 no polling). An earlier async-job + poll design was proven **broken on Vercel** — the in-memory job
 Map is per-instance, so a poll load-balanced away from the creating instance 404'd (confirmed live).
-The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline; prod re-test pending.
+The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline, AND prod re-test
+(3-file chunk on Vercel returned results inline, HTTP 200, no 404).
+
+**Matching + image upgrades (from a peer-code comparison):**
+- `lib/matcher.ts` — added corporate-suffix truncation (`Sierra Nevada` == `Sierra Nevada Brewing
+  Co.`, but `Reserve` still reviews), attribution-prefix stripping for the bottler address
+  (`Distilled & Bottled by X` == `X`), and Levenshtein single-char OCR-misread → review. 34 unit
+  tests (was 29).
+- `lib/image.ts` — `normalizeImage` → `prepareImages` returning `NormalizedImage[]`: upscales tiny
+  images, splits very large ones (long edge > ~2352px) into two overlapping tiles along the longer
+  axis. `extractLabel` now takes an array and sends N image blocks as "sections of the same label".
+  Verified live: a 2000×3000 image tiled into 2, all 7 fields extracted at high confidence.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

@@ -41,7 +41,12 @@ This split is deliberate and does two things at once:
   "40% ABV" match, but 40% vs 45% is flagged.
 - **Net contents** — unit-aware ("750 mL" == "750ML", "1 L" == "1000 mL").
 - **Brand / class / producer / country** — normalized comparison (case, whitespace, punctuation)
-  with a similarity band: exact → match, close → *needs review*, different → mismatch.
+  with a similarity band: exact → match, close → *needs review*, different → mismatch. On top of that
+  (Dave's "labels require judgment"): an added **company suffix** is treated as the same name
+  ("Sierra Nevada" == "Sierra Nevada Brewing Co.") while a real differentiator like "Reserve" still
+  gets flagged; a bottler address that only adds an **attribution prefix** ("Distilled & Bottled by
+  …") matches its core; and a **single-character OCR misread** in one word (Levenshtein-detected)
+  becomes *needs review — check this word* instead of a hard mismatch.
 - **Low-confidence reads** are never auto-passed — a shaky read is forced to *needs review* even
   if the text happens to match (Dave's "labels require judgment").
 
@@ -55,7 +60,7 @@ Three ways to supply the expected values: pick a **mock application**, **type th
 | Framework | **Next.js 16** (App Router) + React 19 + TypeScript 5.9 | One app for UI + API; server routes are first-class, which suits the real server work (image handling, Claude calls, batch jobs). |
 | AI | **Claude Haiku 4.5** vision via `@anthropic-ai/sdk` | Fastest tier — fits the ~5s budget with headroom; cheapest per label at ~150k/year volume; the task is transcription, not deep reasoning, so a heavyweight model isn't needed. |
 | Validation | **Zod** | Schema-validates extraction output and request bodies. |
-| Images | **sharp** | EXIF auto-rotate (sideways phone photos read upright), downscale to ~1568px, re-encode — faster calls, smaller payloads, and it re-decodes every upload as a safety check. |
+| Images | **sharp** | EXIF auto-rotate (sideways phone photos read upright), then a three-band prep: upscale tiny images toward ~1 MP (lanczos3 + sharpen), pass normal ones through at ~1568px, and **split very large photos (long edge > ~2352px) into two overlapping tiles** so the fine-print government warning survives instead of being lost to a single downscale. Re-decodes every upload as a safety check. |
 | Styling | **Tailwind CSS v4** | Accessibility-first UI. |
 | Tests | **Vitest** | 29 unit tests on the grading core. |
 | Deploy | **Vercel** | Fastest path to a live URL for a Next.js app. |

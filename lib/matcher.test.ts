@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   normalizeText,
   similarity,
+  levenshtein,
   parseAbv,
   parseVolumeMl,
   reviewLabel,
@@ -210,6 +211,51 @@ describe("reviewLabel against an application", () => {
       buildLabel({ brandName: field("Silver Creek", "low") }),
       silverCreekApp,
     );
+    expect(statusOf(r, "brandName")).toBe("review");
+  });
+});
+
+// --- nuanced matching (truncation / attribution / OCR misread) -------------
+
+describe("levenshtein", () => {
+  it("counts single-character edits", () => {
+    expect(levenshtein("creek", "creek")).toBe(0);
+    expect(levenshtein("creek", "creok")).toBe(1);
+    expect(levenshtein("", "creek")).toBe(5);
+  });
+});
+
+describe("nuanced field matching", () => {
+  it("treats an added company suffix as a match", () => {
+    const r = reviewLabel(
+      buildLabel({ brandName: field("Silver Creek Distillers") }),
+      silverCreekApp,
+    );
+    expect(statusOf(r, "brandName")).toBe("match");
+  });
+
+  it("still flags a product differentiator like Reserve as review", () => {
+    const r = reviewLabel(
+      buildLabel({ brandName: field("Silver Creek Reserve") }),
+      silverCreekApp,
+    );
+    expect(statusOf(r, "brandName")).toBe("review");
+  });
+
+  it("accepts a bottler address that only adds an attribution prefix", () => {
+    const r = reviewLabel(
+      buildLabel({
+        producerNameAddress: field(
+          "Distilled & Bottled by Silver Creek Distillers, Frankfort, KY",
+        ),
+      }),
+      silverCreekApp,
+    );
+    expect(statusOf(r, "producerNameAddress")).toBe("match");
+  });
+
+  it("flags a single likely OCR misread as review, not mismatch", () => {
+    const r = reviewLabel(buildLabel({ brandName: field("Silver Creok") }), silverCreekApp);
     expect(statusOf(r, "brandName")).toBe("review");
   });
 });

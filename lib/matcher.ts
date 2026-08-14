@@ -137,6 +137,111 @@ function tightenWhitespace(s: string): string {
   return s.replace(/\s+/g, " ").trim();
 }
 
+/** Levenshtein edit distance (insert/delete/substitute). Exported for direct unit testing. */
+export function levenshtein(a: string, b: string): number {
+  if (a === b) return 0;
+  if (a.length === 0) return b.length;
+  if (b.length === 0) return a.length;
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const curr = [i];
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      curr[j] = Math.min(prev[j] + 1, curr[j - 1] + 1, prev[j - 1] + cost);
+    }
+    prev = curr;
+  }
+  return prev[b.length];
+}
+
+/**
+ * Company/entity suffix words that don't distinguish one product from another. Used to accept a
+ * shorter name inside a longer one ("Sierra Nevada" vs "Sierra Nevada Brewing Co.") while still
+ * flagging a genuine product differentiator ("Silver Creek" vs "Silver Creek Reserve"): "reserve"
+ * is not in this set, so that stays a review, not an auto-match.
+ */
+const CORPORATE_FILLER = new Set([
+  "co", "company", "companies", "inc", "incorporated", "llc", "llp", "ltd", "limited",
+  "corp", "corporation", "plc", "brewing", "brewery", "breweries", "brewers", "winery",
+  "wineries", "vintners", "vineyard", "vineyards", "cellars", "cellar", "estate", "estates",
+  "distillery", "distilleries", "distillers", "distilling", "spirits", "beverage", "beverages",
+  "imports", "importers", "sons", "bros", "brothers", "group", "holdings", "cooperage",
+]);
+
+/**
+ * True when `shorter` appears as a contiguous run of whole words inside `longer` and every extra
+ * word in `longer` is a corporate/entity suffix. Single-word forms under 4 characters are rejected
+ * to avoid matching on short filler tokens.
+ */
+function isCorporateTruncation(shorter: string[], longer: string[]): boolean {
+  if (shorter.length === 0 || shorter.length >= longer.length) return false;
+  if (shorter.length === 1 && shorter[0].length < 4) return false;
+  for (let start = 0; start + shorter.length <= longer.length; start++) {
+    let matched = true;
+    for (let j = 0; j < shorter.length; j++) {
+      if (longer[start + j] !== shorter[j]) {
+        matched = false;
+        break;
+      }
+    }
+    if (!matched) continue;
+    const extra = [...longer.slice(0, start), ...longer.slice(start + shorter.length)];
+    if (extra.every((w) => CORPORATE_FILLER.has(w))) return true;
+  }
+  return false;
+}
+
+/**
+ * True when two equal-length word lists differ in exactly one position and that word pair looks
+ * like an OCR slip (short edit distance on a word of at least 4 characters). Lets a single misread
+ * character become a "double-check this" review instead of a hard mismatch.
+ */
+function singleWordMisread(a: string[], b: string[]): boolean {
+  if (a.length !== b.length || a.length === 0) return false;
+  let diffIdx = -1;
+  for (let i = 0; i < a.length; i++) {
+    if (a[i] !== b[i]) {
+      if (diffIdx !== -1) return false; // more than one differing word
+      diffIdx = i;
+    }
+  }
+  if (diffIdx === -1) return false;
+  const wa = a[diffIdx];
+  const wb = b[diffIdx];
+  const maxLen = Math.max(wa.length, wb.length);
+  if (maxLen < 4) return false;
+  const budget = Math.max(1, Math.floor(maxLen / 6));
+  return levenshtein(wa, wb) <= budget;
+}
+
+/**
+ * Attribution phrases that prefix a bottler/producer line ("Distilled & Bottled by X"). Stored in
+ * normalized form (lowercase, punctuation folded to spaces — so "&" becomes a gap). Longer phrases
+ * are listed first so the most specific one strips. Used only for the address field.
+ */
+const ATTRIBUTION_PREFIXES = [
+  "distilled and bottled by", "distilled bottled by",
+  "produced and bottled by", "produced bottled by",
+  "made and bottled by", "made bottled by",
+  "brewed and bottled by", "brewed bottled by",
+  "vinted and bottled by", "vinted bottled by",
+  "cellared and bottled by", "cellared bottled by",
+  "blended and bottled by", "blended bottled by",
+  "produced and imported by", "produced imported by",
+  "imported and bottled by", "imported bottled by",
+  "bottled by", "produced by", "distilled by", "brewed by", "made by",
+  "imported by", "packed by", "manufactured by", "vinted by", "cellared by",
+];
+
+/** Strip a recognized attribution prefix from an already-normalized address string. */
+function stripAttributionPrefix(normalized: string): string {
+  for (const p of ATTRIBUTION_PREFIXES) {
+    if (normalized === p) return "";
+    if (normalized.startsWith(p + " ")) return normalized.slice(p.length + 1);
+  }
+  return normalized;
+}
+
 // ---------------------------------------------------------------------------
 // Per-field grading
 // ---------------------------------------------------------------------------
@@ -147,12 +252,29 @@ interface Verdict {
 }
 
 function gradeTolerantText(extracted: string, expected: string): Verdict {
-  if (normalizeText(extracted) === normalizeText(expected)) {
+  const ne = normalizeText(extracted);
+  const nx = normalizeText(expected);
+  if (ne === nx) {
     return { status: "match", note: "Matches the application." };
   }
+  const ta = ne.split(" ").filter(Boolean);
+  const tb = nx.split(" ").filter(Boolean);
   const sim = similarity(extracted, expected);
   if (sim >= 0.9) {
     return { status: "match", note: "Matches, with minor formatting differences." };
+  }
+  // A shorter name fully inside the longer one where the only extra words are a company suffix,
+  // e.g. "Sierra Nevada" vs "Sierra Nevada Brewing Co." A product differentiator like "Reserve"
+  // is not a company suffix, so it correctly falls through to a review below.
+  if (isCorporateTruncation(ta, tb) || isCorporateTruncation(tb, ta)) {
+    return { status: "match", note: "Same name aside from an added company suffix (e.g. \"Brewing Co.\")." };
+  }
+  // Exactly one word differs by a likely OCR slip — surface it for a quick human check, don't fail.
+  if (singleWordMisread(ta, tb)) {
+    return {
+      status: "review",
+      note: "Differs by a single character in one word — likely an OCR misread; double-check it against the label.",
+    };
   }
   if (sim >= 0.55) {
     return {
@@ -161,6 +283,27 @@ function gradeTolerantText(extracted: string, expected: string): Verdict {
     };
   }
   return { status: "mismatch", note: "Does not match the application value." };
+}
+
+/**
+ * Address grading: the tolerant compare first (handles exact/formatting/truncation), then a retry
+ * with attribution prefixes stripped from both sides, so "Distilled & Bottled by X" reads as "X".
+ */
+function gradeAddress(extracted: string, expected: string): Verdict {
+  const base = gradeTolerantText(extracted, expected);
+  if (base.status === "match") return base;
+
+  const se = stripAttributionPrefix(normalizeText(extracted));
+  const sx = stripAttributionPrefix(normalizeText(expected));
+  if (se && sx) {
+    if (se === sx) {
+      return { status: "match", note: "Address matches once the bottling/attribution phrase is set aside." };
+    }
+    if (similarity(se, sx) >= 0.9) {
+      return { status: "match", note: "Address matches aside from the attribution phrase and minor formatting." };
+    }
+  }
+  return base;
 }
 
 function gradeAbv(extracted: string, expected: string): Verdict {
@@ -240,6 +383,8 @@ function gradeField(
       return gradeAbv(extractedValue, expected);
     case "netContents":
       return gradeVolume(extractedValue, expected);
+    case "producerNameAddress":
+      return gradeAddress(extractedValue, expected);
     default:
       return gradeTolerantText(extractedValue, expected);
   }

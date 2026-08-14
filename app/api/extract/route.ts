@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { normalizeImage, ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/image";
+import { prepareImages, ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/image";
 import {
   extractLabel,
   DEFAULT_MODEL,
@@ -64,7 +64,7 @@ export async function POST(request: Request) {
     const imgStart = Date.now();
     let normalized;
     try {
-      normalized = await normalizeImage(buffer);
+      normalized = await prepareImages(buffer);
     } catch {
       return NextResponse.json(
         {

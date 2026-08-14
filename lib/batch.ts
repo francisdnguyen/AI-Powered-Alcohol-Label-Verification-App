@@ -1,4 +1,4 @@
-import { normalizeImage } from "./image";
+import { prepareImages } from "./image";
 import { extractLabel } from "./anthropic";
 import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher";
 
@@ -83,7 +83,7 @@ export async function processBatch(
   await runPool(inputs, BATCH_CONCURRENCY, async (input, index) => {
     const started = Date.now();
     try {
-      const normalized = await normalizeImage(input.buffer);
+      const normalized = await prepareImages(input.buffer);
       const extracted = await extractLabel(normalized);
       const review = reviewLabel(extracted, expected);
       results[index] = {
