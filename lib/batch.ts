@@ -10,8 +10,16 @@ import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher"
  */
 export const BATCH_CONCURRENCY = 4;
 
-/** Upper bound on files per batch, to keep a prototype run bounded. */
-export const MAX_BATCH_FILES = 25;
+/**
+ * Upper bound on files per batch. Sized to the serverless execution model, not an
+ * arbitrary number: the batch route runs with `maxDuration = 60s`, and at
+ * BATCH_CONCURRENCY=4 with ~3.5–5s per label a single function invocation clears roughly
+ * 40 labels before the 60s ceiling. Stakeholders asked for 200–300 at once; reaching that
+ * reliably needs the production path (a durable queue + Vercel KV job store + a background
+ * worker that survives the HTTP response) rather than a larger constant here — see the
+ * fire-and-forget NOTE on processJob below and the in-memory-state limitation in README.
+ */
+export const MAX_BATCH_FILES = 40;
 
 export type BatchFileStatus = "pending" | "processing" | "done" | "error";
 
