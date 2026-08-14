@@ -92,10 +92,10 @@ testing; regenerate them with `node scripts/make-sample-labels.mjs`.
 
 ## Guardrails
 
-- **$5 spend cap.** Every Claude call is priced from its reported token usage and counted against
-  a hard $5 cap (`ANALYSIS_BUDGET_USD`); once reached, the app returns `402` instead of spending
-  more. See [`lib/budget.ts`](lib/budget.ts).
-- **Rate limiting.** 20 requests / 10 min per IP on every credit-spending route.
+- **Spend control.** Claude API spend is governed at the account level in the Anthropic Console
+  (usage limits), not in application code — the reliable place for a hard ceiling, since an in-app
+  counter can't be shared across serverless instances anyway.
+- **Rate limiting.** 20 requests / 10 min per IP on every Claude-calling route.
 - **Exact-pinned dependencies** with a `minimumReleaseAge` of 7 days (pnpm) — the app refuses to
   install any dependency version published less than a week ago (supply-chain safety).
 - **Security** — see [SECURITY.md](SECURITY.md) for the full threat model.
@@ -108,8 +108,8 @@ asserted.
 
 _Measured on the first live run (Claude Haiku 4.5, `claude-haiku-4-5-20251001`): single-label
 reviews landed at **3.3–4.0s** end-to-end (Claude vision call 3.2–4.0s; image normalization +
-deterministic grading ≈ 50–65 ms combined). Batch runs measured ~3.3–3.5s per label. Five calls
-cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/label**._
+deterministic grading ≈ 50–65 ms combined). Batch runs measured ~3.3–3.5s per label. Cost worked
+out to roughly **$0.007/label** in reported token usage._
 
 ## Trade-offs & limitations (documented, not hidden)
 
@@ -121,9 +121,9 @@ cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/labe
   allowlist the Anthropic endpoint through the firewall, or run a local/Azure-hosted vision model.
 - **Not deployed on Azure.** The brief mentions Azure/FedRAMP infrastructure; this prototype uses
   Vercel for speed-to-demo. Documented divergence, not an oversight.
-- **In-memory state.** Mock applications, the budget counter, and rate-limit counters live in
-  memory — they reset on restart and are per-instance on serverless. Production would use a durable
-  store (Vercel KV / Postgres).
+- **In-memory state.** Mock applications and rate-limit counters live in memory — they reset on
+  restart and are per-instance on serverless. Production would use a durable store (Vercel KV /
+  Postgres).
 - **Batch capacity: up to 300 via client-side chunking (synchronous).** Compliance staff asked to
   process 200–300 applications at once. Two hard Vercel limits make a single giant request
   impossible — a ~4.5 MB request-body cap and a 60-second function limit (a measured sweep showed
@@ -139,7 +139,8 @@ cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/labe
   chunk clears in ~24s, well under the 60s limit; verified locally and on production). The trade-off
   is coarser progress — a chunk's files flip to done together rather than streaming one-by-one — and
   the per-IP rate limit (20 POSTs/10 min) caps a single window to ~20 chunks. At ~$0.007/label a
-  300-label batch is ~$2.10, so the $5 spend cap would be sized accordingly.
+  300-label batch is ~$2.10, so set the account-level usage limit in the Anthropic Console
+  accordingly.
 - **Bold typeface** on the government warning can't be verified from a transcription (text and caps
   can).
 - **Single-label uploads over ~4.5 MB** can still hit Vercel's request-body limit (the batch path

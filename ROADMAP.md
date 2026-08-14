@@ -28,12 +28,12 @@ low-confidence→review, self-check mode) + `lib/applications.ts` (6 mock apps) 
 verified in browser (semantics, dropdown, mode-switching, no console errors).
 ⏳ Live "Analyze" flow (needs key) DEFERRED.
 
-## Step 4 — Batch + $5 budget cap  ◐
-`POST /api/batch` (in-memory job, bounded concurrency pool) + `GET /api/batch/[id]` polling;
-batch UI with per-file live status + expandable field details; nav between single/batch.
-**$5 Claude spend cap** (`lib/budget.ts`, `/api/budget`, HTTP 402 on exhaustion) — the user's
-"limit to 5" = dollars. Build-verified; `/batch` renders, no console errors.
-⏳ Live batch run (needs key) DEFERRED.
+## Step 4 — Batch review  ◐
+`POST /api/batch` (bounded concurrency pool); batch UI with per-file status + expandable field
+details; nav between single/batch.
+_Later reworked (see STATE.md): batch is now client-chunked + synchronous (no job store/polling),
+and the in-app `$5` spend cap was removed by owner decision — Claude spend is controlled by the
+account-level usage limit in the Anthropic Console instead._
 
 ## Step 5 — Security hardening  ☑
 `lib/rateLimit.ts` (per-IP, 20/10min) on all credit-spending routes; MIME allowlist + size cap;

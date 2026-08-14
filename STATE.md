@@ -40,10 +40,10 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
    to the browser. Lives behind `/api/*` route handlers.
 3. **The browser is untrusted.** Every `/api/*` route validates input with Zod, enforces a MIME
    allowlist + size cap on uploads, and caps free-text length.
-4. **State lives in-memory** (`Map`) for the prototype — mock applications, the budget counter, and
-   rate-limit counters reset on process restart / serverless cold start. Documented limitation, not
-   a bug. Full durability = a shared store (Vercel KV / Postgres). (Note: batch has **no** job store
-   anymore — see 4a.)
+4. **State lives in-memory** (`Map`) for the prototype — mock applications and rate-limit counters
+   reset on process restart / serverless cold start. Documented limitation, not a bug. Full
+   durability = a shared store (Vercel KV / Postgres). (Note: batch has **no** job store anymore —
+   see 4a.)
 4a. **Batch = client-chunked + synchronous.** `MAX_BATCH_FILES` (20) is the PER-REQUEST cap; the
    browser splits a large upload into chunks, POSTs each, and merges results. Each chunk is analyzed
    synchronously inside its POST and returns results inline — no job store, no polling. This replaced
@@ -54,11 +54,10 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
    photo cannot verify **bold** formatting — known, documented limit.
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
    not asserted.
-7. **Hard $5 spend cap on Claude usage** (`lib/budget.ts`, `ANALYSIS_BUDGET_USD`, default 5).
-   Every Claude call goes through `extractLabel`, which asserts budget before the call and
-   records exact cost from reported token usage (Haiku 4.5: $1/MTok in, $5/MTok out) after.
-   Exhaustion → HTTP 402. **This is the user's "limit to 5" instruction — DOLLARS, not
-   concurrency.** In-memory counter → per-instance on serverless, resets on restart (limitation).
+7. **Claude spend is controlled at the account level** (Anthropic Console usage limits), NOT in
+   code. The earlier in-app `$5` cap (`lib/budget.ts`, `/api/budget`, HTTP 402) was **removed by
+   owner decision** — an in-memory counter can't be shared across serverless instances, and the
+   account-level limit is the reliable ceiling. `ANALYSIS_BUDGET_USD` is no longer read by any code.
 
 ## Toolchain / stack (pinned)
 - Runtime: Node 22.19.0. Package manager: **pnpm 11.20.0** via corepack (no global shim;

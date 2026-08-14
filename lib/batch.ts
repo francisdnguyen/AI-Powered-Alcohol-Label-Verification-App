@@ -4,8 +4,7 @@ import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher"
 
 /**
  * Max simultaneous Claude vision calls while processing one chunk — a stability default so a
- * chunk never fans out into dozens of concurrent API calls (rate limits, latency). This is
- * independent of the dollar budget cap in lib/budget.ts, which is the actual spend control ($5).
+ * chunk never fans out into dozens of concurrent API calls (rate limits, latency).
  */
 export const BATCH_CONCURRENCY = 4;
 
@@ -67,7 +66,7 @@ export interface BatchInput {
 
 /**
  * Process one chunk of labels and return a per-file result for each. Never rejects: a failure on
- * one label (bad image, Claude error, budget exhaustion mid-chunk) is captured as that file's
+ * one label (bad image, Claude error) is captured as that file's
  * `error` result so the rest of the chunk still comes back.
  */
 export async function processBatch(

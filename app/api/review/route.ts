@@ -6,7 +6,6 @@ import {
   MissingApiKeyError,
   ExtractionError,
 } from "@/lib/anthropic";
-import { BudgetExceededError } from "@/lib/budget";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import {
   reviewLabel,
@@ -156,9 +155,6 @@ export async function POST(request: Request) {
     };
     return NextResponse.json(body);
   } catch (err) {
-    if (err instanceof BudgetExceededError) {
-      return NextResponse.json({ error: err.message }, { status: 402 });
-    }
     if (err instanceof MissingApiKeyError) {
       return NextResponse.json(
         { error: "The server is not configured with an API key yet." },

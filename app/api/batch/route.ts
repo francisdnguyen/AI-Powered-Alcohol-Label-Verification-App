@@ -7,7 +7,6 @@ import {
 } from "@/lib/batch";
 import { getApplication } from "@/lib/applications";
 import type { ApplicationData } from "@/lib/matcher";
-import { getBudgetStatus } from "@/lib/budget";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 export const runtime = "nodejs";
@@ -25,13 +24,6 @@ export async function POST(request: Request) {
     return NextResponse.json(
       { error: "Too many requests. Please wait a moment and try again." },
       { status: 429, headers: { "Retry-After": String(rl.retryAfterSec ?? 60) } },
-    );
-  }
-
-  if (getBudgetStatus().exhausted) {
-    return NextResponse.json(
-      { error: "The analysis budget has been reached; no new batches can run." },
-      { status: 402 },
     );
   }
 
