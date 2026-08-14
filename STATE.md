@@ -15,8 +15,10 @@ holds measured numbers.
 
 **Batch upgraded (post-deploy):** raised to a 200–300-file capability via browser-side downscaling
 (`lib/imageClient.ts`) + client chunking into ≤20-file, <4.5 MB requests, merged into one progress
-bar; each chunk kept alive past the response with `waitUntil()` (`@vercel/functions`). Verified
-end-to-end locally: 25 files → 2 chunks (20+5) → 25/25 done in ~24s, 0 errors.
+bar. Each chunk is analyzed **synchronously inside its POST** (results returned inline; no job store,
+no polling). An earlier async-job + poll design was proven **broken on Vercel** — the in-memory job
+Map is per-instance, so a poll load-balanced away from the creating instance 404'd (confirmed live).
+The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline; prod re-test pending.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
@@ -27,15 +29,16 @@ end-to-end locally: 25 files → 2 chunks (20+5) → 25/25 done in ~24s, 0 error
    to the browser. Lives behind `/api/*` route handlers.
 3. **The browser is untrusted.** Every `/api/*` route validates input with Zod, enforces a MIME
    allowlist + size cap on uploads, and caps free-text length.
-4. **State lives in-memory** (`Map`) for the prototype — mock applications and batch jobs reset
-   on process restart / serverless cold start. Documented limitation, not a bug. Batch chunks now
-   survive the HTTP response via `waitUntil()`, but the job store is still per-instance, so a poll
-   can miss a job on a recycled instance (UI gives up after ~15 misses and flags those files).
-   Full durability = a shared store (Vercel KV / Postgres).
-4a. **Batch = client-chunked.** `MAX_BATCH_FILES` (20) is the PER-REQUEST cap; the browser splits a
-   large upload into chunks and merges results. Whole-batch total (300) is enforced client-side.
-   Per-chunk sizing is bounded by the ~4.5 MB body limit and the measured ~1.19s/label throughput
-   under the 60s function limit.
+4. **State lives in-memory** (`Map`) for the prototype — mock applications, the budget counter, and
+   rate-limit counters reset on process restart / serverless cold start. Documented limitation, not
+   a bug. Full durability = a shared store (Vercel KV / Postgres). (Note: batch has **no** job store
+   anymore — see 4a.)
+4a. **Batch = client-chunked + synchronous.** `MAX_BATCH_FILES` (20) is the PER-REQUEST cap; the
+   browser splits a large upload into chunks, POSTs each, and merges results. Each chunk is analyzed
+   synchronously inside its POST and returns results inline — no job store, no polling. This replaced
+   an async-job + poll design that 404'd on Vercel (per-instance job Map). Whole-batch total (300) is
+   enforced client-side; per-chunk sizing is bounded by the ~4.5 MB body limit and the measured
+   ~1.19s/label throughput under the 60s function limit.
 5. **Government warning is matched verbatim** (strict); other fields tolerant-normalized. A
    photo cannot verify **bold** formatting — known, documented limit.
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
@@ -52,8 +55,6 @@ end-to-end locally: 25 files → 2 chunks (20+5) → 25/25 done in ~24s, 0 error
 - Framework: Next.js **16.3.0** (App Router) + React 19.2.8 + TypeScript **5.9.3**
   (chose proven TS 5.9.3 over the new TS 7 native compiler for reliability).
 - AI: `@anthropic-ai/sdk` **0.115.0**, Claude Haiku 4.5 vision.
-- Serverless helpers: `@vercel/functions` **3.8.0** (`waitUntil` for batch chunk survival; pinned
-  to 3.8.0 because 3.9.x was <7 days old and failed the freshness gate).
 - Validation: zod 4.4.3. Image: sharp 0.35.3. Tests: vitest 4.1.10. Styling: tailwindcss 4.3.3.
 - All deps pinned to EXACT versions (`save-exact=true`). Supply-chain gate:
   `minimumReleaseAge: 10080` (7 days) + `minimumReleaseAgeStrict: true` in

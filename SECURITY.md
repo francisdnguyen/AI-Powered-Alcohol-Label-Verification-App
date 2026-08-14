@@ -25,12 +25,13 @@ client input as hostile. There is no other trust boundary — no multi-tenant da
 ## Accepted risk (documented, not fixed — prototype scope)
 
 - **No authentication.** Internal review/testing tool, not a multi-tenant production system.
-- **In-memory state is per-instance.** The rate-limit counters, `$5` budget counter, mock
-  applications, and batch jobs all live in a `Map`. On Vercel each serverless instance has its
-  own copy and it resets on cold start — so the rate limit and budget cap are **per-instance,
-  not globally enforced**. Production would move these to a shared store (Vercel KV / Redis /
-  Postgres).
-- **No client-side image compression.** A single photo over ~4.5 MB can hit Vercel's request-body
-  limit before our 8 MB check; not mitigated with client-side downscaling yet.
+- **In-memory state is per-instance.** The rate-limit counters, `$5` budget counter, and mock
+  applications live in a `Map`. On Vercel each serverless instance has its own copy and it resets on
+  cold start — so the rate limit and budget cap are **per-instance, not globally enforced**.
+  Production would move these to a shared store (Vercel KV / Redis / Postgres). (Batch no longer
+  keeps server state: each chunk is processed synchronously within its request, precisely to avoid
+  this per-instance problem, which an earlier poll-based design hit as 404s on Vercel.)
+- **Single-label uploads over ~4.5 MB** can hit Vercel's request-body limit before our 8 MB check.
+  The batch path downscales in the browser first; the single-label review route does not.
 - **No CSP.** A Content-Security-Policy header is not set; would be added for production.
 - **No automated security tests.** Manual verification only at this stage.

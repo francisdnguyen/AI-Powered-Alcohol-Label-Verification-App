@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { BatchFileResult, BatchJob } from "@/lib/batch";
+import type { BatchFileResult } from "@/lib/batch";
 import { downscaleImage, chunkFiles } from "@/lib/imageClient";
 import { FieldResultCard } from "@/components/FieldResultCard";
 
@@ -22,8 +22,6 @@ const CHUNK_MAX_BYTES = 3.6 * 1024 * 1024;
 const CHUNK_MAX_COUNT = 20;
 /** How many chunk POSTs are in flight at once — paces the per-IP rate limit and Claude fan-out. */
 const CHUNK_CONCURRENCY = 3;
-/** Give up on a chunk whose job we can't find after this many polls (~cross-instance recycle). */
-const MAX_POLL_MISSES = 15;
 
 /** Run `worker` over items with at most `limit` in flight; returns results in order. */
 async function mapPool<T, R>(
@@ -44,14 +42,6 @@ async function mapPool<T, R>(
   return out;
 }
 
-interface ChunkRef {
-  jobId: string;
-  offset: number;
-  count: number;
-  done: boolean;
-  misses: number;
-}
-
 export default function BatchPage() {
   const [files, setFiles] = useState<File[]>([]);
   const [mode, setMode] = useState<BatchMode>("self");
@@ -62,9 +52,7 @@ export default function BatchPage() {
   const [prep, setPrep] = useState<string | null>(null);
   const [results, setResults] = useState<BatchFileResult[]>([]);
   const [total, setTotal] = useState(0);
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const resultsRef = useRef<BatchFileResult[]>([]);
-  const chunksRef = useRef<ChunkRef[]>([]);
 
   useEffect(() => {
     fetch("/api/applications")
@@ -74,12 +62,17 @@ export default function BatchPage() {
         if (d.applications?.[0]) setApplicationId(d.applications[0].id);
       })
       .catch(() => {});
-    return () => {
-      if (pollRef.current) clearInterval(pollRef.current);
-    };
   }, []);
 
-  /** Mark a whole chunk's files as errored (upload failed or job lost) and re-render. */
+  /** Write a chunk's per-file results into the merged list at its global offset and re-render. */
+  function mergeChunk(offset: number, files: BatchFileResult[]) {
+    for (const f of files) {
+      resultsRef.current[offset + f.index] = { ...f, index: offset + f.index };
+    }
+    setResults(resultsRef.current.slice());
+  }
+
+  /** Mark a whole chunk's files as errored (the chunk request itself failed) and re-render. */
   function markChunkError(offset: number, count: number, message: string) {
     for (let i = 0; i < count; i++) {
       resultsRef.current[offset + i] = {
@@ -90,43 +83,6 @@ export default function BatchPage() {
       };
     }
     setResults(resultsRef.current.slice());
-  }
-
-  /** Poll every outstanding chunk job, merging per-file results into one global list. */
-  function pollAll() {
-    if (pollRef.current) clearInterval(pollRef.current);
-    pollRef.current = setInterval(async () => {
-      const active = chunksRef.current.filter((c) => !c.done);
-      await Promise.all(
-        active.map(async (c) => {
-          try {
-            const res = await fetch(`/api/batch/${c.jobId}`);
-            if (!res.ok) {
-              // A 404 on Vercel can mean the job's instance was recycled (in-memory store).
-              if (++c.misses >= MAX_POLL_MISSES) {
-                markChunkError(c.offset, c.count, "Lost track of this batch (server instance recycled).");
-                c.done = true;
-              }
-              return;
-            }
-            c.misses = 0;
-            const data = (await res.json()) as BatchJob;
-            for (const f of data.files) {
-              resultsRef.current[c.offset + f.index] = { ...f, index: c.offset + f.index };
-            }
-            if (data.done) c.done = true;
-          } catch {
-            // transient network error; keep polling
-          }
-        }),
-      );
-      setResults(resultsRef.current.slice());
-      if (chunksRef.current.every((c) => c.done)) {
-        if (pollRef.current) clearInterval(pollRef.current);
-        pollRef.current = null;
-        setRunning(false);
-      }
-    }, 1200);
   }
 
   async function onSubmit(e: FormEvent) {
@@ -143,8 +99,6 @@ export default function BatchPage() {
     setError(null);
     setResults([]);
     setTotal(0);
-    if (pollRef.current) clearInterval(pollRef.current);
-    chunksRef.current = [];
 
     try {
       // 1. Shrink images in the browser so large photos fit the request-body limit.
@@ -161,15 +115,17 @@ export default function BatchPage() {
       setResults(resultsRef.current.slice());
       setTotal(prepared.length);
 
-      // 3. POST each chunk (bounded concurrency), recording where its files land globally.
+      // 3. POST each chunk (bounded concurrency). Each request processes its labels synchronously
+      //    and returns the finished results inline, which we merge as each chunk resolves.
       let offset = 0;
       const descriptors = chunks.map((c) => {
         const d = { files: c, offset };
         offset += c.length;
         return d;
       });
-      setPrep(`Uploading ${chunks.length} batch${chunks.length === 1 ? "" : "es"}…`);
+      setPrep(`Analyzing ${prepared.length} label${prepared.length === 1 ? "" : "s"} in ${chunks.length} batch${chunks.length === 1 ? "" : "es"}…`);
 
+      let anyOk = false;
       await mapPool(descriptors, CHUNK_CONCURRENCY, async (d) => {
         const fd = new FormData();
         for (const f of d.files) fd.append("images", f);
@@ -179,29 +135,21 @@ export default function BatchPage() {
           const res = await fetch("/api/batch", { method: "POST", body: fd });
           const data = await res.json();
           if (!res.ok) {
-            markChunkError(d.offset, d.files.length, data.error || `Upload failed (${res.status}).`);
+            markChunkError(d.offset, d.files.length, data.error || `Analysis failed (${res.status}).`);
             return;
           }
-          chunksRef.current.push({
-            jobId: data.jobId as string,
-            offset: d.offset,
-            count: d.files.length,
-            done: false,
-            misses: 0,
-          });
+          anyOk = true;
+          mergeChunk(d.offset, data.files as BatchFileResult[]);
         } catch {
           markChunkError(d.offset, d.files.length, "Could not reach the server.");
         }
       });
 
       setPrep(null);
-
-      if (chunksRef.current.length === 0) {
-        setRunning(false);
-        setError("None of the batches could be started. Please try again in a moment.");
-        return;
+      setRunning(false);
+      if (!anyOk) {
+        setError("None of the batches could be analyzed. Please try again in a moment.");
       }
-      pollAll();
     } catch {
       setPrep(null);
       setRunning(false);
@@ -425,8 +373,5 @@ function BatchStatus({ file }: { file: BatchFileResult }) {
   if (file.status === "error") {
     return <span className="rounded-full bg-red-700 px-3 py-1 text-sm font-semibold text-white">Error</span>;
   }
-  if (file.status === "processing") {
-    return <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">Analyzing…</span>;
-  }
-  return <span className="rounded-full bg-neutral-300 px-3 py-1 text-sm font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">Waiting</span>;
+  return <span className="rounded-full bg-blue-700 px-3 py-1 text-sm font-semibold text-white">Analyzing…</span>;
 }

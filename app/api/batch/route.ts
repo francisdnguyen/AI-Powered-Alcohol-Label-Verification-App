@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
-import { waitUntil } from "@vercel/functions";
 import { ALLOWED_MIME, MAX_UPLOAD_BYTES } from "@/lib/image";
 import {
-  createJob,
+  processBatch,
   MAX_BATCH_FILES,
   type BatchInput,
 } from "@/lib/batch";
@@ -14,7 +13,12 @@ import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 export const runtime = "nodejs";
 export const maxDuration = 60;
 
-/** Start a batch analysis job. Returns a job id the client polls. */
+/**
+ * Analyze one chunk of labels and return every per-file result inline. The client splits a large
+ * upload into chunks (each within the ~4.5MB body limit and this MAX_BATCH_FILES cap) and merges
+ * the responses. Synchronous on purpose: it keeps all state inside one invocation, avoiding the
+ * per-instance in-memory job store that made an earlier poll-based design 404 on Vercel.
+ */
 export async function POST(request: Request) {
   const rl = checkRateLimit(getClientIp(request));
   if (!rl.ok) {
@@ -73,7 +77,6 @@ export async function POST(request: Request) {
   }
 
   let expected: ApplicationData | null = null;
-  let applicationId: string | undefined;
   if (mode === "application") {
     const id = form.get("applicationId");
     if (typeof id !== "string" || id === "") {
@@ -83,7 +86,6 @@ export async function POST(request: Request) {
     if (!app) {
       return NextResponse.json({ error: "That application was not found." }, { status: 404 });
     }
-    applicationId = app.id;
     expected = {
       brandName: app.brandName,
       classType: app.classType,
@@ -99,9 +101,6 @@ export async function POST(request: Request) {
     inputs.push({ buffer: Buffer.from(await f.arrayBuffer()), filename: f.name });
   }
 
-  const { job, processing } = createJob(inputs, mode, expected, applicationId);
-  // Keep the serverless function alive until this chunk finishes grading. Off-Vercel this is a
-  // safe no-op and processing runs to completion on the long-lived server anyway.
-  waitUntil(processing);
-  return NextResponse.json({ jobId: job.id, total: job.total });
+  const results = await processBatch(inputs, expected);
+  return NextResponse.json({ files: results, total: results.length });
 }
