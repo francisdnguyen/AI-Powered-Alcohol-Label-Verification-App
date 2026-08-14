@@ -4,6 +4,7 @@ import {
   processBatch,
   MAX_BATCH_FILES,
   type BatchInput,
+  type BatchFileResult,
 } from "@/lib/batch";
 import { getApplication } from "@/lib/applications";
 import type { ApplicationData } from "@/lib/matcher";
@@ -47,20 +48,6 @@ export async function POST(request: Request) {
       { status: 400 },
     );
   }
-  for (const f of files) {
-    if (!ALLOWED_MIME.has(f.type)) {
-      return NextResponse.json(
-        { error: `"${f.name}" is not a supported image (use JPEG, PNG, or WebP).` },
-        { status: 415 },
-      );
-    }
-    if (f.size > MAX_UPLOAD_BYTES) {
-      return NextResponse.json(
-        { error: `"${f.name}" is too large (max 8 MB each).` },
-        { status: 413 },
-      );
-    }
-  }
 
   // Expected values: self-check, or one application matched against every file.
   const mode = form.get("mode");
@@ -88,11 +75,38 @@ export async function POST(request: Request) {
     };
   }
 
+  // Validate per file: an invalid file (bad MIME / oversized) gets an inline error result so it
+  // never fails the other labels in the same chunk. Valid files are analyzed and merged back by
+  // their original position.
+  const results: BatchFileResult[] = new Array(files.length);
   const inputs: BatchInput[] = [];
-  for (const f of files) {
-    inputs.push({ buffer: Buffer.from(await f.arrayBuffer()), filename: f.name });
+  const inputPositions: number[] = [];
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    if (!ALLOWED_MIME.has(f.type)) {
+      results[i] = {
+        index: i,
+        filename: f.name,
+        status: "error",
+        error: `"${f.name}" is not a supported image (use JPEG, PNG, or WebP).`,
+      };
+    } else if (f.size > MAX_UPLOAD_BYTES) {
+      results[i] = {
+        index: i,
+        filename: f.name,
+        status: "error",
+        error: `"${f.name}" is too large (max 8 MB each).`,
+      };
+    } else {
+      inputs.push({ buffer: Buffer.from(await f.arrayBuffer()), filename: f.name });
+      inputPositions.push(i);
+    }
   }
 
-  const results = await processBatch(inputs, expected);
+  const processed = await processBatch(inputs, expected);
+  processed.forEach((r, k) => {
+    results[inputPositions[k]] = { ...r, index: inputPositions[k] };
+  });
+
   return NextResponse.json({ files: results, total: results.length });
 }

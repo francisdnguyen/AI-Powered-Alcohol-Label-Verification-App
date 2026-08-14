@@ -24,7 +24,7 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
 **Matching + image upgrades (from a peer-code comparison):**
 - `lib/matcher.ts` — added corporate-suffix truncation (`Sierra Nevada` == `Sierra Nevada Brewing
   Co.`, but `Reserve` still reviews), attribution-prefix stripping for the bottler address
-  (`Distilled & Bottled by X` == `X`), and Levenshtein single-char OCR-misread → review. 34 unit
+  (`Distilled & Bottled by X` == `X`), and Levenshtein single-char OCR-misread → review. 37 unit
   tests (was 29).
 - `lib/image.ts` — `normalizeImage` → `prepareImages` returning `NormalizedImage[]`: upscales tiny
   images, splits very large ones (long edge > ~2352px) into two overlapping tiles along the longer
@@ -38,8 +38,9 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
    transcribed value, never a flipped verdict.
 2. **`ANTHROPIC_API_KEY` is server-only.** Never imported into any client component or bundled
    to the browser. Lives behind `/api/*` route handlers.
-3. **The browser is untrusted.** Every `/api/*` route validates input with Zod, enforces a MIME
-   allowlist + size cap on uploads, and caps free-text length.
+3. **The browser is untrusted.** Every `/api/*` route validates input — a MIME allowlist + size cap
+   on uploads and free-text length caps (manual guards in the route handlers). Zod validates the
+   model's *output* (`extractedLabelSchema`), not the multipart form input.
 4. **State lives in-memory** (`Map`) for the prototype — mock applications and rate-limit counters
    reset on process restart / serverless cold start. Documented limitation, not a bug. Full
    durability = a shared store (Vercel KV / Postgres). (Note: batch has **no** job store anymore —
@@ -72,15 +73,18 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   `@anthropic-ai/sdk` 0.116.0→0.115.0, and eslint pinned to 9.39.5 (eslint-config-next@16 peers
   to eslint 9, not 10).
 
-## Key files (as they land)
-- Config: `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.ts`,
-  `postcss.config.mjs`, `eslint.config.mjs`, `.env.example`.
-- App: `app/layout.tsx`, `app/page.tsx`, `app/globals.css` (scaffold defaults, to be replaced).
-- Not yet created: `lib/*`, `app/api/*`, `components/*`, tests, `SECURITY.md`, `README.md`.
+## Key files
+- Config: `package.json`, `.npmrc`, `pnpm-workspace.yaml`, `tsconfig.json`, `next.config.ts`
+  (security headers + CSP), `postcss.config.mjs`, `eslint.config.mjs`, `.env.example`.
+- Lib: `lib/anthropic.ts` (Claude vision transcription), `lib/matcher.ts` (+ `matcher.test.ts`),
+  `lib/image.ts` (server prep/tiling), `lib/imageClient.ts` (browser downscale + chunk),
+  `lib/batch.ts`, `lib/rateLimit.ts`, `lib/applications.ts`, `lib/ttb.ts`, `lib/schema.ts`.
+- App: `app/page.tsx` (single review), `app/batch/page.tsx`, `app/layout.tsx`, `app/globals.css`,
+  API routes `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`.
+- Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, this file.
 
 ## Open threads
-- Canonical TTB government-warning text to hard-code in `lib/ttb.ts` — confirm with user (Step 1).
-- Exact Claude Haiku 4.5 model id to use in the SDK call — verify at Step 1.
-- Batch API concurrency capped at **5** per user instruction (Step 4) — flag before building.
 - `next-env.d.ts` references `.next/types`, so the real typecheck gate is `next build`, not
   bare `tsc --noEmit` on a clean tree.
+- Rate limiter + mock-app state are in-memory (per-instance on serverless) — durable store is the
+  documented production follow-up.

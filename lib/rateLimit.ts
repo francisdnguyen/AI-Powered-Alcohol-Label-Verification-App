@@ -42,9 +42,16 @@ export function checkRateLimit(ip: string): RateLimitResult {
   return { ok: true };
 }
 
-/** Best-effort client IP from proxy headers (Vercel sets x-forwarded-for). */
+/**
+ * Best-effort client IP from proxy headers. Prefer `x-real-ip`: on Vercel it is set by the
+ * platform and is not client-forgeable. The leftmost `x-forwarded-for` entry is client-supplied
+ * and can be spoofed to get a fresh rate-limit bucket per request, so it is only a fallback for
+ * non-Vercel environments.
+ */
 export function getClientIp(request: Request): string {
+  const realIp = request.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   const xff = request.headers.get("x-forwarded-for");
   if (xff) return xff.split(",")[0]!.trim();
-  return request.headers.get("x-real-ip") ?? "unknown";
+  return "unknown";
 }
