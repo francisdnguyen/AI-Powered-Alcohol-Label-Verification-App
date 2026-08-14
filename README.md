@@ -120,16 +120,19 @@ cost **$0.034** in real token usage against the $5 cap — roughly **$0.007/labe
   live in memory — they reset on restart and are per-instance on serverless. Production would use a
   durable store (Vercel KV / Postgres).
 - **Batch capacity (40/run) vs. the 200–300 ask.** Compliance staff asked to process 200–300
-  applications at once. The prototype caps a batch at **40 files**, sized to the serverless runtime:
-  the batch route runs under a 60-second function limit and processes 4 labels concurrently, so ~40
-  labels clears comfortably in one invocation while a full 300 would exceed the wall-clock ceiling
-  mid-run. It's a deliberate bound, not the number that matters — because processing is
-  fire-and-forget after the HTTP response and the job store is in-memory, a large batch is also not
-  yet durable across serverless instances. Reaching 200–300 reliably is a production change, not a
-  bigger constant: a durable queue with a Vercel KV / Postgres job store and a background worker
-  (`waitUntil`/`after()`, or a dedicated worker) that survives the response and checkpoints
-  per-label progress. At ~$0.007/label a 300-label batch is also ~$2.10, so the spend cap would
-  need to be sized accordingly.
+  applications at once. The prototype caps a batch at **40 files**, a number picked from a measured
+  sweep rather than a guess: batch processing scales almost perfectly linearly at **~1.19s of
+  wall-time per label** under the 4-way concurrency pool (40 → 46.9s, 56 → 65.1s, 72 → 84.9s), so
+  total time crosses the batch route's **60-second serverless function limit at ~50 labels**. 40
+  finishes in ~47s with ~13s of headroom for cold start and upload; 56 was measured to exceed 60s,
+  which on Vercel means the function is killed mid-run and the tail of the batch is lost. The cap is
+  a deliberate bound, not the number that matters — because processing is fire-and-forget after the
+  HTTP response and the job store is in-memory, a large batch is also not yet durable across
+  serverless instances. Reaching 200–300 reliably is a production change, not a bigger constant: a
+  durable queue with a Vercel KV / Postgres job store and a background worker (`waitUntil`/`after()`,
+  or a dedicated worker) that survives the response and checkpoints per-label progress. At
+  ~$0.007/label a 300-label batch is also ~$2.10, so the spend cap would need to be sized
+  accordingly.
 - **Bold typeface** on the government warning can't be verified from a transcription (text and caps
   can).
 - **No client-side image compression** yet — a photo over ~4.5 MB can hit Vercel's body limit.

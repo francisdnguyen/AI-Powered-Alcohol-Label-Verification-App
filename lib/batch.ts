@@ -11,13 +11,15 @@ import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher"
 export const BATCH_CONCURRENCY = 4;
 
 /**
- * Upper bound on files per batch. Sized to the serverless execution model, not an
- * arbitrary number: the batch route runs with `maxDuration = 60s`, and at
- * BATCH_CONCURRENCY=4 with ~3.5–5s per label a single function invocation clears roughly
- * 40 labels before the 60s ceiling. Stakeholders asked for 200–300 at once; reaching that
- * reliably needs the production path (a durable queue + Vercel KV job store + a background
- * worker that survives the HTTP response) rather than a larger constant here — see the
- * fire-and-forget NOTE on processJob below and the in-memory-state limitation in README.
+ * Upper bound on files per batch. Sized to the serverless execution model, not an arbitrary
+ * number. The batch route runs with `maxDuration = 60s`; a measured local sweep at
+ * BATCH_CONCURRENCY=4 came out almost perfectly linear at ~1.19s of wall-time per label
+ * (40 -> 46.9s, 56 -> 65.1s, 72 -> 84.9s), so total time crosses the 60s function ceiling at
+ * ~50 labels. 40 leaves ~13s of headroom for cold start and upload; 56 was measured to blow
+ * past 60s (on Vercel that batch would be killed mid-run). Stakeholders asked for 200-300 at
+ * once; reaching that reliably needs the production path (a durable queue + Vercel KV job store
+ * + a background worker that survives the HTTP response) rather than a larger constant here --
+ * see the fire-and-forget NOTE on processJob below and the in-memory-state limitation in README.
  */
 export const MAX_BATCH_FILES = 40;
 
