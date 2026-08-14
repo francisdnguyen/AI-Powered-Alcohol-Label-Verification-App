@@ -90,6 +90,15 @@ describe("parseAbv", () => {
   it("falls back to proof / 2 when no percent", () => {
     expect(parseAbv("80 proof")).toBe(40);
   });
+  it("reads a degree mark before the word proof", () => {
+    expect(parseAbv("80° Proof")).toBe(40);
+  });
+  it("reads a bare US degree/proof mark", () => {
+    expect(parseAbv("151°")).toBe(75.5);
+  });
+  it("does not misread degrees Plato (°P) as proof", () => {
+    expect(parseAbv("12°P")).toBeNull();
+  });
   it("returns null when unparseable", () => {
     expect(parseAbv("strong stuff")).toBeNull();
   });

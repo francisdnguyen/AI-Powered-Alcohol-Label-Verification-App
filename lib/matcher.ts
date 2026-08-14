@@ -103,8 +103,13 @@ export function similarity(a: string, b: string): number {
 export function parseAbv(s: string): number | null {
   const pct = s.match(/(\d+(?:\.\d+)?)\s*%/);
   if (pct) return parseFloat(pct[1]);
-  const proof = s.match(/(\d+(?:\.\d+)?)\s*proof/i);
+  // "80 proof", "80° proof", "80°proof" — a degree mark may sit between the number and the word.
+  const proof = s.match(/(\d+(?:\.\d+)?)\s*°?\s*proof/i);
   if (proof) return parseFloat(proof[1]) / 2;
+  // Bare degree mark in US proof style ("151°"). Skip "°P" (degrees Plato — a beer wort measure,
+  // not proof) so a beer strength isn't misread as alcohol content.
+  const degree = s.match(/(\d+(?:\.\d+)?)\s*°(?!\s*[pP])/);
+  if (degree) return parseFloat(degree[1]) / 2;
   return null;
 }
 
@@ -310,7 +315,8 @@ function gradeAbv(extracted: string, expected: string): Verdict {
   const a = parseAbv(extracted);
   const e = parseAbv(expected);
   if (a !== null && e !== null) {
-    if (Math.abs(a - e) <= 0.1) {
+    // Compliance-strict: allow only a hair of rounding. A real ABV difference is a violation.
+    if (Math.abs(a - e) <= 0.05) {
       return { status: "match", note: `Alcohol content matches (${a}%).` };
     }
     return {
