@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { ReviewMode, ReviewResponse } from "@/lib/matcher";
+import { downscaleImage } from "@/lib/imageClient";
 import { FieldResultCard } from "@/components/FieldResultCard";
 
 interface AppSummary {
@@ -78,8 +79,13 @@ export default function Home() {
     setError(null);
     setResult(null);
 
+    // Shrink large photos in the browser so a multi-MB phone image doesn't hit Vercel's ~4.5 MB
+    // request-body limit before the server's 8 MB check. Small images pass through untouched, and
+    // downscaleImage never throws (falls back to the original on any failure).
+    const prepared = await downscaleImage(file);
+
     const fd = new FormData();
-    fd.append("image", file);
+    fd.append("image", prepared);
     fd.append("mode", mode);
     if (mode === "application") fd.append("applicationId", applicationId);
     if (mode === "manual") {
