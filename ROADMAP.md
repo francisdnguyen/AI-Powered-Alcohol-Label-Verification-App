@@ -60,6 +60,14 @@ form: a per-row verdict **pill** that appears only once a label has been checked
 with an indeterminate "Verifying N labels…" indicator during a bulk run and the pills filling in when
 the single `/api/batch` request resolves. The board stayed gone — neither peer console had one.
 
+## Step 9 — Extraction-accuracy eval  ☑
+`eval/run-eval.mjs` + `EVALUATION.md`: scores the vision model's transcription against the labels'
+known printed values (`public/labels/ground-truth.json` — free ground truth, since the labels are
+generated from known fields), independently of the grader. `npm run eval` → `eval/results.json`.
+First run (`claude-haiku-4-5`, 12 labels): **94% field-level, 8/12 labels exact**, and it surfaced a
+real weakness — on domestic labels the model folds the "USA" country line into the producer address.
+Fix direction is prompt tuning (future `PROMPT_TUNING.md`).
+
 ## Step 8 — Queue visual pass  ☑
 Bring the queue closer to a polished console: stat-tile icons + "Pending review" tile, colour-coded
 Type pills (Spirits / Wine / Beer), a flag glyph on High priority, ○/✓/✕/ℹ on status badges, a search

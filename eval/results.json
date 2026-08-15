@@ -1,0 +1,873 @@
+{
+  "ranAt": "2026-08-15T07:35:01.436Z",
+  "base": "http://localhost:3000",
+  "model": "claude-haiku-4-5-20251001",
+  "summary": {
+    "labelsTotal": 12,
+    "labelsScored": 12,
+    "labelsExact": 8,
+    "fieldsCorrect": 79,
+    "fieldsTotal": 84,
+    "fieldAccuracy": 94,
+    "perField": {
+      "brandName": {
+        "valueAccuracy": 91.7,
+        "foundAccuracy": 100
+      },
+      "classType": {
+        "valueAccuracy": 100,
+        "foundAccuracy": 100
+      },
+      "alcoholContent": {
+        "valueAccuracy": 100,
+        "foundAccuracy": 100
+      },
+      "netContents": {
+        "valueAccuracy": 100,
+        "foundAccuracy": 100
+      },
+      "producerNameAddress": {
+        "valueAccuracy": 83.3,
+        "foundAccuracy": 100
+      },
+      "countryOfOrigin": {
+        "valueAccuracy": 83.3,
+        "foundAccuracy": 83.3
+      },
+      "governmentWarning": {
+        "valueAccuracy": 100,
+        "foundAccuracy": 100
+      }
+    }
+  },
+  "perLabel": [
+    {
+      "file": "silver-creek.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "SILVER CREEK",
+          "extracted": "SILVER CREEK",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Kentucky Straight Bourbon Whiskey",
+          "extracted": "Kentucky Straight Bourbon Whiskey",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "40% ALC/VOL (80 PROOF)",
+          "extracted": "40% ALC/VOL (80 PROOF)",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Distilled & Bottled by Silver Creek Distillers, Frankfort, KY",
+          "extracted": "Distilled & Bottled by Silver Creek Distillers, Frankfort, KY USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "meridian-ridge.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "MERIDIAN RIDGE",
+          "extracted": "MERIDIAN RIDGE",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Cabernet Sauvignon",
+          "extracted": "Cabernet Sauvignon",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "13.5% ABV",
+          "extracted": "13.5% ABV",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Produced & Bottled by Meridian Ridge Winery, Napa, CA",
+          "extracted": "Produced & Bottled by Meridian Ridge Winery, Napa, CA USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "harbor-lager.png",
+      "allValueCorrect": false,
+      "fields": {
+        "brandName": {
+          "expected": "HARBOR LIGHT LAGER",
+          "extracted": "ARBOR LIGHT LAGE",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": false
+        },
+        "classType": {
+          "expected": "Lager Beer",
+          "extracted": "Lager Beer",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "4.8% ALC/VOL",
+          "extracted": "4.8% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "355 mL",
+          "extracted": "355 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Harbor Brewing Co., Portland, ME",
+          "extracted": "Harbor Brewing Co., Portland, ME USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "chateau-lumiere.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "CHATEAU LUMIERE",
+          "extracted": "CHATEAU LUMIERE",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Champagne",
+          "extracted": "Champagne",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "12% ABV",
+          "extracted": "12% ABV",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Chateau Lumiere, Reims, France",
+          "extracted": "Chateau Lumiere, Reims, France",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "Product of France",
+          "extracted": "Product of France",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "old-anchor-gin.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "OLD ANCHOR",
+          "extracted": "OLD ANCHOR",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "London Dry Gin",
+          "extracted": "London Dry Gin",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "47% ALC/VOL",
+          "extracted": "47% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "1 L",
+          "extracted": "1 L",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Old Anchor Distilling, Seattle, WA",
+          "extracted": "Old Anchor Distilling, Seattle, WA USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "sol-dorado.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "SOL DORADO",
+          "extracted": "SOL DORADO",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Tequila Reposado",
+          "extracted": "Tequila Reposado",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "38% ALC/VOL",
+          "extracted": "38% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Destileria Sol Dorado, Jalisco, Mexico",
+          "extracted": "Destileria Sol Dorado, Jalisco, Mexico",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "Product of Mexico",
+          "extracted": "Product of Mexico",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "birchwood-rye.png",
+      "allValueCorrect": false,
+      "fields": {
+        "brandName": {
+          "expected": "BIRCHWOOD RESERVE",
+          "extracted": "BIRCHWOOD RESERVE",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Straight Rye Whiskey",
+          "extracted": "Straight Rye Whiskey",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "45% ALC/VOL",
+          "extracted": "45% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Birchwood Distillery, Bardstown, KY",
+          "extracted": "Birchwood Distillery, Bardstown, KY USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": false
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "costa-verde.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "COSTA VERDE",
+          "extracted": "COSTA VERDE",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Sauvignon Blanc",
+          "extracted": "Sauvignon Blanc",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "13.5% ABV",
+          "extracted": "13.5% ABV",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Costa Verde Vineyards, Marlborough, New Zealand",
+          "extracted": "Costa Verde Vineyards, Marlborough, New Zealand",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "Product of New Zealand",
+          "extracted": "Product of New Zealand",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "ironclad-ipa.png",
+      "allValueCorrect": false,
+      "fields": {
+        "brandName": {
+          "expected": "IRONCLAD",
+          "extracted": "IRONCLAD",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "India Pale Ale",
+          "extracted": "India Pale Ale",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "6.5% ALC/VOL",
+          "extracted": "6.5% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "473 mL",
+          "extracted": "473 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Ironclad Brewing Co., Richmond, VA",
+          "extracted": "Ironclad Brewing Co., Richmond, VA USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "",
+          "confidence": "high",
+          "found": false,
+          "expectPresent": true,
+          "foundCorrect": false,
+          "valueCorrect": false
+        },
+        "governmentWarning": {
+          "expected": "",
+          "extracted": "",
+          "confidence": "high",
+          "found": false,
+          "expectPresent": false,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "vasco-porto.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "VASCO",
+          "extracted": "VASCO",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Tawny Port",
+          "extracted": "Tawny Port",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "20% ABV",
+          "extracted": "20% ABV",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Quinta do Vasco, Douro, Portugal",
+          "extracted": "Quinta do Vasco, Douro, Portugal",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "Product of Portugal",
+          "extracted": "Product of Portugal",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "northwind-vodka.png",
+      "allValueCorrect": false,
+      "fields": {
+        "brandName": {
+          "expected": "NORTHWIND",
+          "extracted": "NORTHWIND",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Vodka",
+          "extracted": "Vodka",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "40% ALC/VOL",
+          "extracted": "40% ALC/VOL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Northwind Distilling, Minneapolis, MN",
+          "extracted": "Northwind Distilling, Minneapolis, MN USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": false
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "",
+          "confidence": "high",
+          "found": false,
+          "expectPresent": true,
+          "foundCorrect": false,
+          "valueCorrect": false
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    },
+    {
+      "file": "sunset-rose.png",
+      "allValueCorrect": true,
+      "fields": {
+        "brandName": {
+          "expected": "SUNSET COAST",
+          "extracted": "SUNSET COAST",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "classType": {
+          "expected": "Rosé",
+          "extracted": "Rosé",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "alcoholContent": {
+          "expected": "11.5% ABV",
+          "extracted": "11.5% ABV",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "netContents": {
+          "expected": "750 mL",
+          "extracted": "750 mL",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "producerNameAddress": {
+          "expected": "Bottled by Sunset Coast Cellars, Paso Robles, CA",
+          "extracted": "Bottled by Sunset Coast Cellars, Paso Robles, CA USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "countryOfOrigin": {
+          "expected": "USA",
+          "extracted": "USA",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        },
+        "governmentWarning": {
+          "expected": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "extracted": "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.",
+          "confidence": "high",
+          "found": true,
+          "expectPresent": true,
+          "foundCorrect": true,
+          "valueCorrect": true
+        }
+      }
+    }
+  ]
+}

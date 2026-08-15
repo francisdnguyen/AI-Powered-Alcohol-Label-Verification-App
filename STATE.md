@@ -129,7 +129,12 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   Client verify path shared in `lib/bulkVerify.ts`. The queue table adds **#** and **Applicant**
   (producer) columns and color-coded Type pills / status + priority glyphs; `listApplications` now
   also returns `producerNameAddress`.
-- Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, this file.
+- Eval: `eval/run-eval.mjs` (extraction-accuracy harness — POSTs each label to `/api/extract`, scores
+  the read against `public/labels/ground-truth.json` with independent comparators), `eval/results.json`
+  (committed run). `npm run eval`. Needs a live key + running app; not part of the no-key unit suite.
+- Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, `EVALUATION.md` (method + measured accuracy: 94%
+  field-level / 8-of-12 labels on `claude-haiku-4-5`, with the country/producer-merge weakness it
+  surfaced), this file.
 
 ## Open threads
 - `next-env.d.ts` references `.next/types`, so the real typecheck gate is `next build`, not

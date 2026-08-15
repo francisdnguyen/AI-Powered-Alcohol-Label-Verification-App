@@ -66,6 +66,15 @@ This split is deliberate and does two things at once:
 Three ways to supply the expected values: pick a **mock application**, **type them in**, or
 **self-check** (no application — just validate the warning and ABV format on their own terms).
 
+## How well it reads labels
+
+The grader is deterministic and unit-tested; the one probabilistic step is extraction, so that gets a
+**measured number**. Because the sample labels are generated from known field values, their printed
+text is exact ground truth — `npm run eval` scores the model's reading against it. On
+`claude-haiku-4-5` the current run is **94% field-level accuracy (8 of 12 labels perfect)**, and it
+surfaced a concrete weakness (the model sometimes folds a domestic "USA" line into the producer
+address). Method, per-field breakdown, and how to reproduce: [EVALUATION.md](EVALUATION.md).
+
 ## Tech stack & why
 
 | Layer | Choice | Why |
