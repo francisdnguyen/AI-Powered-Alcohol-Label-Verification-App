@@ -57,8 +57,9 @@ against its own filing; reopen restored with no `/api/review` call) and `next bu
 _Iterated with the owner:_ a first "AI check" column read "Not run" on every unverified row and a
 separate `/board` match board duplicated the queue — both were cut. The column came back in a lighter
 form: a per-row verdict **pill** that appears only once a label has been checked (blank otherwise),
-plus a live `done/total` counter during a bulk run (wired through `bulkVerify`'s `onChange`). The
-board stayed gone — neither peer console had one.
+plus a `done/total` counter during a bulk run (wired through `bulkVerify`'s `onChange`; per-chunk, so
+for the ≤12-app queue it advances 0→N when the single request resolves). The board stayed gone —
+neither peer console had one.
 
 ## Step 8 — Queue visual pass  ☑
 Bring the queue closer to a polished console: stat-tile icons + "Pending review" tile, colour-coded

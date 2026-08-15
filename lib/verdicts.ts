@@ -34,7 +34,16 @@ export function loadVerdicts(): Record<string, StoredVerdict> {
     // Self-heal against corrupt/tampered storage (a JSON primitive or array): callers index and
     // assign into this object, which would throw on a non-object. Fall back to an empty map.
     if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) return {};
-    return parsed as Record<string, StoredVerdict>;
+    // Keep only well-formed entries — a tampered/partial value (e.g. a stray primitive) is dropped
+    // rather than handed to a consumer (the queue pill, the review restore) that would throw
+    // destructuring it.
+    const out: Record<string, StoredVerdict> = {};
+    for (const [id, v] of Object.entries(parsed as Record<string, unknown>)) {
+      if (v && typeof v === "object" && "recommendation" in v && "review" in v) {
+        out[id] = v as StoredVerdict;
+      }
+    }
+    return out;
   } catch {
     return {};
   }

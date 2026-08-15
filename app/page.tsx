@@ -149,8 +149,9 @@ export default function QueuePage() {
     setBulkError(null);
     setBulkMessage(null);
     try {
-      // onChange fires per persisted verdict → bump the live counter; the VERDICTS_CHANGED_EVENT it
-      // also fires refreshes each row's verdict pill as results land.
+      // onChange bumps the counter as each verdict persists; the VERDICTS_CHANGED_EVENT it also
+      // fires refreshes the row pills. The queue's selection (≤12) is a single /api/batch chunk, so
+      // both land in one burst when that chunk resolves — the counter is per-chunk, not per-label.
       const summary = await bulkVerify(targets, () => setVerifyDone((n) => n + 1));
       setBulkMessage(summarize(summary) || null);
       if (summary.error) setBulkError(summary.error);

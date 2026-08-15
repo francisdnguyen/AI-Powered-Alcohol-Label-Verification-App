@@ -59,4 +59,15 @@ describe("verdicts", () => {
     expect(() => setVerdict("app-2", sampleVerdict())).not.toThrow();
     expect(getVerdict("app-2")).toEqual(sampleVerdict());
   });
+
+  it("drops malformed per-entry values but keeps well-formed ones", () => {
+    const good = sampleVerdict();
+    window.localStorage.setItem(
+      KEY,
+      JSON.stringify({ "app-good": good, "app-bad": true, "app-partial": { review: {} } }),
+    );
+    expect(loadVerdicts()).toEqual({ "app-good": good });
+    expect(getVerdict("app-bad")).toBeUndefined();
+    expect(getVerdict("app-partial")).toBeUndefined();
+  });
 });

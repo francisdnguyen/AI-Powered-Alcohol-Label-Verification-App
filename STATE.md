@@ -43,8 +43,9 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   checkboxes); "Verify selected" fetches each label client-side, downscales it, and POSTs to
   `/api/batch` in a new `mode:"queue"` where each image is paired with its OWN application via a
   parallel `applicationIds[]` field — so N different filings are graded correctly in one request
-  (not all against one app). `lib/batch.ts` `processBatch` now takes a per-input `expected` override;
-  `BatchFileResult` echoes `applicationId`. The queue caps a request at `MAX_BATCH_FILES` and chunks
+  (not all against one app). Each `BatchInput` carries its own `expected` (self→null, application→the
+  one app, queue→per-file); `lib/batch.ts` `processBatch` grades against it and `BatchFileResult`
+  echoes `applicationId`. The queue caps a request at `MAX_BATCH_FILES` and chunks
   if the seed list ever exceeds it (12 apps today → one request). Verified live: selecting Silver
   Creek + Costa Verde → one `/api/batch` 200 → "Verified 2 labels — 1 ready, 1 likely rejection",
   each graded against its own filing (Costa Verde's ABV mismatch → reject).
@@ -60,8 +61,10 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   the pill is the lighter replacement; neither peer console had a board.)
 - **Bulk-verify helper.** `lib/bulkVerify.ts` holds the client verify path (fetch label → downscale
   → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected". An
-  `onChange` callback drives a live `done/total` counter in the action bar; each persisted verdict
-  fires `VERDICTS_CHANGED_EVENT`, which refreshes the row pills as results land.
+  `onChange` callback feeds a `done/total` counter in the action bar — **per-chunk**, not per-label:
+  the queue's ≤12 selection is a single `/api/batch` request, so it advances 0→N when that chunk
+  resolves. Each persisted verdict fires `VERDICTS_CHANGED_EVENT`, which fills the row pills in when
+  the run completes.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

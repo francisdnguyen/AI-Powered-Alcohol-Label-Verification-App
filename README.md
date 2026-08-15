@@ -14,8 +14,8 @@ Built for the AI-Powered Alcohol Label Verification take-home.
 1. **Review queue (home)** — a searchable, filterable worklist of pending applications with status
    tabs (Pending / Approved / Rejected / Needs info), priority flags, colour-coded type/status, and
    stat tiles. Rows can be **multi-selected and bulk-verified** in one pass (each label graded against
-   its own filing, with live progress); a per-row **AI check** pill then shows the recommendation
-   (Ready / Needs review / Likely rejection), and the result is cached so reopening never re-runs.
+   its own filing); a per-row **AI check** pill then shows the recommendation (Ready / Needs review /
+   Likely rejection), and the result is cached so reopening never re-runs.
 2. **Per-application review** — open an item to see the submitted application data and its label
    side-by-side, run AI verification, and get a rolled-up recommendation (Ready for approval /
    Needs agent review / Likely rejection). Record a disposition (approve / request info / reject).
