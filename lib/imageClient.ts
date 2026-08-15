@@ -61,30 +61,38 @@ export async function downscaleImage(file: File): Promise<File> {
 }
 
 /**
- * Split files into chunks that each stay under both a byte budget and a count cap, so every chunk
- * is a valid single request (under Vercel's ~4.5 MB body limit and the server's per-request file
- * cap). A single file larger than `maxBytes` still gets its own chunk rather than being dropped.
+ * Split items into chunks that each stay under both a byte budget and a count cap, so every chunk is
+ * a valid single request (under Vercel's ~4.5 MB body limit and the server's per-request file cap).
+ * `sizeOf` reports each item's byte weight; a single item larger than `maxBytes` still gets its own
+ * chunk rather than being dropped. Generic so a plain `File[]` and a `{ file }`-pair list share one
+ * implementation (see `chunkFiles` below and `lib/bulkVerify`).
  */
-export function chunkFiles(
-  files: File[],
+export function chunkBySize<T>(
+  items: T[],
+  sizeOf: (item: T) => number,
   maxBytes: number,
   maxCount: number,
-): File[][] {
-  const chunks: File[][] = [];
-  let current: File[] = [];
+): T[][] {
+  const chunks: T[][] = [];
+  let current: T[] = [];
   let currentBytes = 0;
 
-  for (const file of files) {
-    const wouldExceedBytes = currentBytes + file.size > maxBytes && current.length > 0;
+  for (const item of items) {
+    const wouldExceedBytes = currentBytes + sizeOf(item) > maxBytes && current.length > 0;
     const wouldExceedCount = current.length >= maxCount;
     if (wouldExceedBytes || wouldExceedCount) {
       chunks.push(current);
       current = [];
       currentBytes = 0;
     }
-    current.push(file);
-    currentBytes += file.size;
+    current.push(item);
+    currentBytes += sizeOf(item);
   }
   if (current.length > 0) chunks.push(current);
   return chunks;
+}
+
+/** Chunk a flat `File[]` by byte budget + count cap. Thin wrapper over {@link chunkBySize}. */
+export function chunkFiles(files: File[], maxBytes: number, maxCount: number): File[][] {
+  return chunkBySize(files, (f) => f.size, maxBytes, maxCount);
 }

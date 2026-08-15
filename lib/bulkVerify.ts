@@ -10,14 +10,11 @@
  * serverless filesystem (which isn't reliable on Vercel), so the fetch happens here, not on the API.
  */
 
-import { downscaleImage } from "./imageClient";
+import { downscaleImage, chunkBySize } from "./imageClient";
+import { CHUNK_MAX_BYTES, CHUNK_MAX_COUNT } from "./batchLimits";
 import { recommendationFor } from "./matcher";
 import { setVerdict } from "./verdicts";
 import type { BatchFileResult } from "./batch";
-
-/** Per-chunk byte budget (under Vercel's ~4.5 MB body limit) and count cap (matches MAX_BATCH_FILES). */
-const CHUNK_MAX_BYTES = 3.6 * 1024 * 1024;
-const CHUNK_MAX_COUNT = 20;
 
 export interface VerifyTarget {
   id: string;
@@ -40,26 +37,6 @@ export interface BulkVerifySummary {
 }
 
 type Pair = { file: File; id: string };
-
-/** Split label/app pairs into request-sized chunks under both a byte budget and a count cap. */
-function chunkPairs(pairs: Pair[], maxBytes: number, maxCount: number): Pair[][] {
-  const chunks: Pair[][] = [];
-  let current: Pair[] = [];
-  let bytes = 0;
-  for (const p of pairs) {
-    const exceedsBytes = bytes + p.file.size > maxBytes && current.length > 0;
-    const exceedsCount = current.length >= maxCount;
-    if (exceedsBytes || exceedsCount) {
-      chunks.push(current);
-      current = [];
-      bytes = 0;
-    }
-    current.push(p);
-    bytes += p.file.size;
-  }
-  if (current.length > 0) chunks.push(current);
-  return chunks;
-}
 
 /** Did this rejection come from an aborted fetch (caller cancelled the run)? */
 function isAbort(e: unknown): boolean {
@@ -117,8 +94,10 @@ export async function bulkVerify(
     }
   }
 
-  // 2. POST request-sized chunks; persist each finished verdict as it returns.
-  for (const chunk of chunkPairs(pairs, CHUNK_MAX_BYTES, CHUNK_MAX_COUNT)) {
+  // 2. POST request-sized chunks; persist each finished verdict as it returns. The between-chunk
+  // abort check only bites when a selection spans multiple chunks (> CHUNK_MAX_COUNT); today's queue
+  // fits one chunk, so cancel lands on the single in-flight POST below.
+  for (const chunk of chunkBySize(pairs, (p) => p.file.size, CHUNK_MAX_BYTES, CHUNK_MAX_COUNT)) {
     if (signal?.aborted) {
       summary.cancelled = true;
       break;
@@ -129,15 +108,32 @@ export async function bulkVerify(
       fd.append("applicationIds", p.id);
     }
     fd.append("mode", "queue");
+
+    // Fetch is its own try so an abort/transport error counts the whole chunk once. Per-file
+    // persistence below is guarded separately, so a single malformed result can't re-add the chunk.
+    let data: { files?: unknown; error?: string };
     try {
       const res = await fetch("/api/batch", { method: "POST", body: fd, signal });
-      const data = await res.json();
+      data = await res.json();
       if (!res.ok || !Array.isArray(data.files)) {
         summary.failed += chunk.length;
         summary.error ??= data?.error || `Verification failed (${res.status}).`;
         continue;
       }
-      for (const f of data.files as BatchFileResult[]) {
+    } catch (e) {
+      // A cancelled in-flight chunk rejects here; discard its (possibly still-running) server work
+      // rather than counting it as a failure.
+      if (isAbort(e)) {
+        summary.cancelled = true;
+        break;
+      }
+      summary.failed += chunk.length;
+      summary.error ??= "Could not reach the server while verifying.";
+      continue;
+    }
+
+    for (const f of data.files as BatchFileResult[]) {
+      try {
         if (f.status === "done" && f.review && f.applicationId) {
           const recommendation = recommendationFor(f.review);
           setVerdict(f.applicationId, {
@@ -150,16 +146,10 @@ export async function bulkVerify(
         } else {
           summary.failed++;
         }
+      } catch {
+        // A malformed result shouldn't abort the whole chunk — count just this one.
+        summary.failed++;
       }
-    } catch (e) {
-      // A cancelled in-flight chunk rejects here; discard its (possibly still-running) server work
-      // rather than counting it as a failure.
-      if (isAbort(e)) {
-        summary.cancelled = true;
-        break;
-      }
-      summary.failed += chunk.length;
-      summary.error ??= "Could not reach the server while verifying.";
     }
   }
 
@@ -176,10 +166,15 @@ export function summarize(summary: BulkVerifySummary): string {
   if (summary.image) parts.push(`${summary.image} need a clearer photo`);
 
   if (summary.cancelled) {
-    // Cancelled mid-run: lead with the stop, but still credit any verdicts that already landed.
-    if (ok === 0) return "Verification cancelled.";
+    // Cancelled mid-run: lead with the stop, but still credit any verdicts that already landed and
+    // don't hide genuine (non-abort) failures that happened before the cancel.
+    const failedNote = summary.failed > 0 ? `${summary.failed} could not be checked` : "";
+    if (ok === 0) {
+      return failedNote ? `Verification cancelled — ${failedNote}.` : "Verification cancelled.";
+    }
     let msg = `Cancelled — verified ${ok} label${ok === 1 ? "" : "s"} first`;
     if (parts.length) msg += ` (${parts.join(", ")})`;
+    if (failedNote) msg += `; ${failedNote}`;
     return msg;
   }
 

@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import type { BatchFileResult } from "@/lib/batch";
 import { downscaleImage, chunkFiles } from "@/lib/imageClient";
+import { CHUNK_MAX_BYTES, CHUNK_MAX_COUNT } from "@/lib/batchLimits";
 import { FieldResultCard } from "@/components/FieldResultCard";
 import type { ApplicationSummary } from "@/lib/applications";
 
@@ -10,10 +11,6 @@ type BatchMode = "self" | "application";
 
 /** Whole-batch cap (top of the stakeholders' 200-300 ask). Enforced here on the client. */
 const MAX_TOTAL_FILES = 300;
-/** Per-chunk byte budget — kept under Vercel's ~4.5 MB request-body limit with margin. */
-const CHUNK_MAX_BYTES = 3.6 * 1024 * 1024;
-/** Per-chunk file cap — must match the server's MAX_BATCH_FILES (20). */
-const CHUNK_MAX_COUNT = 20;
 /** How many chunk POSTs are in flight at once — paces the per-IP rate limit and Claude fan-out. */
 const CHUNK_CONCURRENCY = 3;
 

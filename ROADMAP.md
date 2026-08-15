@@ -65,7 +65,16 @@ label fetch/chunk, forwarded to both `fetch`es); the action bar shows a **Cancel
 is in flight. Cancel is client-side — an in-flight chunk's server work may still finish but its result
 is discarded, and the selection is kept so the reviewer can retry. `BulkVerifySummary.cancelled` +
 `summarize` handle the message. Verified live (12-label run → Cancel → "Verification cancelled.",
-selection preserved); `next build` + 57/57 vitest green.
+selection preserved).
+
+_Follow-up — 6-agent audit pass:_ ran a six-persona review (completion, reality-check, pragmatist,
+compliance, spec-match, deep-debug) over the recent work. No critical/high; applied the real findings:
+`summarize` now surfaces genuine failures on cancel; per-file verdict persistence is guarded so a
+malformed result can't double-count; keyboard focus follows the Verify↔Cancel swap and an unmount
+effect aborts an in-flight run; the redundant `verifyTotal` state was dropped; the per-chunk caps were
+unified into a client-safe `lib/batchLimits.ts` (single source, no drift) and the two byte/count
+chunkers collapsed into one generic `chunkBySize`; dangling `AGENTS.md` doc references were repointed.
+`next build` + 60/60 vitest green; refactored cancel flow re-verified live at zero API cost.
 
 ## Step 10 — Image-quality outcome  ☑
 Extraction self-reports overall `imageQuality` (clear/partial/poor); a **poor** read becomes its own

@@ -1,4 +1,4 @@
-# Supply-chain freshness gate (AGENTS.md): refuse dependency versions
+# Supply-chain freshness gate (see STATE.md, toolchain): refuse dependency versions
 # published less than 7 days ago. Value is in MINUTES: 7d * 24h * 60m = 10080.
 # pnpm v11 defaults this to 1440 (1 day); we raise it to 7 days.
 minimumReleaseAge: 10080

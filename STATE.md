@@ -1,7 +1,7 @@
 # STATE.md — durable invariant map
 
 > The project's stable memory. Update at each phase transition and after every file
-> modification. Truth has one home. (See AGENTS.md.)
+> modification. This file is the one home for durable truth.
 
 ## What this is
 Prototype for TTB compliance agents: extract 7 fields from an alcohol-label photo and grade
@@ -70,12 +70,17 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   `cancelled: boolean`; an `AbortError` sets it (never counted as `failed`). Cancel is **client-side
   only** — an in-flight chunk's server work may still finish, but its result is discarded (the fetch
   rejects, so no verdict persists for it); any verdicts that already landed are kept. `summarize`
-  leads with the stop ("Verification cancelled." / "Cancelled — verified N labels first (…)"). The
-  queue (`app/page.tsx`) stores the controller in an `abortRef`; while verifying, the action bar
-  shows a single **Cancel** button (calls `abortRef.current?.abort()`) instead of the disabled
-  Verify/Clear pair, and the selection is **kept** on cancel (cleared only after a full run) so a
-  reviewer can retry. Verified live in-browser (12-label run → Cancel → "Verification cancelled.",
-  selection preserved, no verdicts persisted); +5 vitest (`lib/bulkVerify.test.ts`).
+  leads with the stop ("Verification cancelled." / "Cancelled — verified N labels first (…)") and
+  still surfaces genuine (non-abort) failures ("… N could not be checked"). The queue
+  (`app/page.tsx`) stores the controller in an `abortRef`; while verifying, the action bar shows a
+  single **Cancel** button (calls `abortRef.current?.abort()`) instead of the disabled Verify/Clear
+  pair, and the selection is **kept** on cancel (cleared only after a full run) so a reviewer can
+  retry. Keyboard focus follows the Verify↔Cancel swap, and an unmount effect aborts a run still in
+  flight if the queue is left. **Note — at the current 12-app queue size a selection is always one
+  chunk, so a cancel is all-or-nothing** ("Verification cancelled."); the per-chunk partial-credit
+  path ("verified N first") is forward-looking and only fires when a selection exceeds
+  `CHUNK_MAX_COUNT`. Verified live in-browser (12-label run → Cancel → "Verification cancelled.",
+  selection + focus preserved, no verdicts persisted); +8 vitest (`lib/bulkVerify.test.ts`, 60 total).
 
 **Image-quality outcome ("needs a clearer photo").** Extraction now self-reports an overall
 `imageQuality` (clear / partial / poor — `lib/schema.ts`, prompted in `lib/anthropic.ts`, `.catch`
@@ -138,7 +143,10 @@ a "Low photo quality" pill in the queue / bulk verify. Verified live: a heavily 
   (security headers + CSP), `postcss.config.mjs`, `eslint.config.mjs`, `.env.example`.
 - Lib: `lib/anthropic.ts` (Claude vision transcription), `lib/matcher.ts` (grading +
   `recommendationFor`; `+ matcher.test.ts`), `lib/image.ts` (server prep/tiling),
-  `lib/imageClient.ts` (browser downscale + chunk), `lib/batch.ts`, `lib/rateLimit.ts`,
+  `lib/imageClient.ts` (browser downscale + generic `chunkBySize`, used by both the batch page and
+  the queue's bulk verify), `lib/batch.ts`, `lib/batchLimits.ts` (client-safe single source for
+  `MAX_BATCH_FILES` + the per-chunk caps, so the browser chunkers can't drift from the server cap),
+  `lib/rateLimit.ts`,
   `lib/applications.ts` (12 mock COLA apps + queue metadata; `listApplications` now includes
   `labelImage` so the queue can bulk-verify), `lib/dispositions.ts` (localStorage human decisions;
   `+ dispositions.test.ts`), `lib/verdicts.ts` (localStorage persisted AI recommendations;

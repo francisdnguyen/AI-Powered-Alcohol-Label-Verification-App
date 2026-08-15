@@ -45,11 +45,25 @@ export default function QueuePage() {
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [verifying, setVerifying] = useState(false);
-  const [verifyTotal, setVerifyTotal] = useState(0);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
   // Controller for the in-flight bulk run, so the Cancel button can abort it.
   const abortRef = useRef<AbortController | null>(null);
+  // Keep keyboard focus on the action button across the Verify↔Cancel swap (the buttons swap
+  // places when `verifying` flips, which would otherwise drop focus to <body>).
+  const verifyBtnRef = useRef<HTMLButtonElement>(null);
+  const cancelBtnRef = useRef<HTMLButtonElement>(null);
+  const prevVerifying = useRef(verifying);
+
+  // Abort any run still in flight if the queue unmounts (e.g. navigating into a review).
+  useEffect(() => () => abortRef.current?.abort(), []);
+
+  useEffect(() => {
+    if (prevVerifying.current === verifying) return;
+    prevVerifying.current = verifying;
+    if (verifying) cancelBtnRef.current?.focus();
+    else if (selected.size > 0) verifyBtnRef.current?.focus();
+  }, [verifying, selected.size]);
 
   useEffect(() => {
     fetch("/api/applications")
@@ -147,7 +161,6 @@ export default function QueuePage() {
     const controller = new AbortController();
     abortRef.current = controller;
     setVerifying(true);
-    setVerifyTotal(targets.length);
     setBulkError(null);
     setBulkMessage(null);
     try {
@@ -239,13 +252,14 @@ export default function QueuePage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
           <span className="text-sm font-medium text-blue-900 dark:text-blue-200" aria-live="polite">
             {verifying
-              ? `Verifying ${verifyTotal} label${verifyTotal === 1 ? "" : "s"}…`
+              ? `Verifying ${selected.size} label${selected.size === 1 ? "" : "s"}…`
               : `${selected.size} selected`}
           </span>
           <div className="flex items-center gap-2">
             {verifying ? (
               <button
                 type="button"
+                ref={cancelBtnRef}
                 onClick={() => abortRef.current?.abort()}
                 className="rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-neutral-900 dark:text-blue-200 dark:hover:bg-blue-950/50"
               >
@@ -255,6 +269,7 @@ export default function QueuePage() {
               <>
                 <button
                   type="button"
+                  ref={verifyBtnRef}
                   onClick={verifySelected}
                   disabled={selected.size === 0}
                   className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-700"

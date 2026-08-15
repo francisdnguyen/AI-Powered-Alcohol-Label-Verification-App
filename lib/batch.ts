@@ -9,24 +9,18 @@ import { reviewLabel, type ApplicationData, type ReviewResult } from "./matcher"
 export const BATCH_CONCURRENCY = 4;
 
 /**
- * Upper bound on files per *request*. This is the per-chunk cap, not the whole-batch cap: to reach
- * the stakeholders' 200-300 target the client splits a large upload into chunks and POSTs each
+ * Upper bound on files per *request* — the per-chunk cap, not the whole-batch cap. To reach the
+ * stakeholders' 200-300 target the client splits a large upload into chunks and POSTs each
  * separately (see app/batch/page.tsx), because Vercel caps a request body at ~4.5MB and a
- * serverless function at `maxDuration = 60s`.
+ * serverless function at `maxDuration = 60s`. Each chunk is processed SYNCHRONOUSLY inside its own
+ * POST and the finished results are returned in the response body — no job store, no polling (an
+ * earlier async-job + poll design 404'd on Vercel, where the in-memory job Map is per-instance).
  *
- * Each chunk is processed SYNCHRONOUSLY inside its own POST and the finished results are returned
- * in the response body -- there is no job store and no polling. That is deliberate: an earlier
- * async-job + poll design was proven broken on Vercel, where the in-memory job Map is per-instance,
- * so a poll load-balanced to a different instance than the POST got a 404. Synchronous chunks sit
- * entirely inside one function invocation, so they sidestep the cross-instance problem.
- *
- * A measured local sweep at BATCH_CONCURRENCY=4 was almost perfectly linear at ~1.19s of wall-time
- * per label (40 -> 46.9s, 56 -> 65.1s, 72 -> 84.9s), so ~50 labels in one request already crosses
- * the 60s ceiling. 20 per chunk clears in ~24s with comfortable headroom for cold start + upload,
- * and keeps the chunk count for a 300-file batch under the per-IP rate limit (20 POSTs / 10 min).
- * The whole-batch total (300) is enforced client-side.
+ * The value lives in `./batchLimits` (client-safe) so the browser chunkers derive their per-chunk
+ * count from the same number and can't drift out of agreement with this cap. Re-exported here so
+ * server callers keep importing it from `lib/batch`.
  */
-export const MAX_BATCH_FILES = 20;
+export { MAX_BATCH_FILES } from "./batchLimits";
 
 export type BatchFileStatus = "pending" | "done" | "error";
 
