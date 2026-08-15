@@ -60,11 +60,11 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   call. (An always-on "Not run" column and a separate `/board` match board were tried and removed —
   the pill is the lighter replacement; neither peer console had a board.)
 - **Bulk-verify helper.** `lib/bulkVerify.ts` holds the client verify path (fetch label → downscale
-  → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected". An
-  `onChange` callback feeds a `done/total` counter in the action bar — **per-chunk**, not per-label:
-  the queue's ≤12 selection is a single `/api/batch` request, so it advances 0→N when that chunk
-  resolves. Each persisted verdict fires `VERDICTS_CHANGED_EVENT`, which fills the row pills in when
-  the run completes.
+  → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected".
+  The action bar shows an indeterminate "Verifying N labels…" while the request is in flight (the
+  queue's ≤12 selection is a single `/api/batch` request that resolves at once — no honest per-item
+  tick to show); each persisted verdict fires `VERDICTS_CHANGED_EVENT`, which fills the row pills in
+  when the run completes.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

@@ -46,7 +46,6 @@ export default function QueuePage() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [verifying, setVerifying] = useState(false);
   const [verifyTotal, setVerifyTotal] = useState(0);
-  const [verifyDone, setVerifyDone] = useState(0);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
 
@@ -145,14 +144,12 @@ export default function QueuePage() {
 
     setVerifying(true);
     setVerifyTotal(targets.length);
-    setVerifyDone(0);
     setBulkError(null);
     setBulkMessage(null);
     try {
-      // onChange bumps the counter as each verdict persists; the VERDICTS_CHANGED_EVENT it also
-      // fires refreshes the row pills. The queue's selection (≤12) is a single /api/batch chunk, so
-      // both land in one burst when that chunk resolves — the counter is per-chunk, not per-label.
-      const summary = await bulkVerify(targets, () => setVerifyDone((n) => n + 1));
+      // Each persisted verdict fires VERDICTS_CHANGED_EVENT → the row pills fill in when the run
+      // completes (the queue's ≤12 selection is a single /api/batch request that resolves at once).
+      const summary = await bulkVerify(targets);
       setBulkMessage(summarize(summary) || null);
       if (summary.error) setBulkError(summary.error);
       setSelected(new Set());
@@ -236,7 +233,7 @@ export default function QueuePage() {
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 dark:border-blue-900 dark:bg-blue-950/40">
           <span className="text-sm font-medium text-blue-900 dark:text-blue-200" aria-live="polite">
             {verifying
-              ? `Verifying labels… ${verifyDone}/${verifyTotal} checked`
+              ? `Verifying ${verifyTotal} label${verifyTotal === 1 ? "" : "s"}…`
               : `${selected.size} selected`}
           </span>
           <div className="flex items-center gap-2">

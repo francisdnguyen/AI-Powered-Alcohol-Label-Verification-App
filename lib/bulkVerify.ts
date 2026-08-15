@@ -58,13 +58,11 @@ function chunkPairs(pairs: Pair[], maxBytes: number, maxCount: number): Pair[][]
 }
 
 /**
- * Verify a set of applications against their own filings. `onChange` is called after each verdict is
- * persisted so the caller can re-render live as results land. Never throws — failures are counted.
+ * Verify a set of applications against their own filings. Never throws — failures are counted into
+ * the returned summary. Each persisted verdict fires `VERDICTS_CHANGED_EVENT`, so a caller showing
+ * per-row pills refreshes them as verdicts land (one burst per resolved chunk).
  */
-export async function bulkVerify(
-  targets: VerifyTarget[],
-  onChange?: () => void,
-): Promise<BulkVerifySummary> {
+export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySummary> {
   const summary: BulkVerifySummary = { approve: 0, review: 0, reject: 0, failed: 0 };
 
   // 1. Fetch + downscale each label into a File paired with its application id.
@@ -112,7 +110,6 @@ export async function bulkVerify(
             totalMs: f.timingMs,
           });
           summary[recommendation.level]++;
-          onChange?.();
         } else {
           summary.failed++;
         }
