@@ -12,9 +12,9 @@ Built for the AI-Powered Alcohol Label Verification take-home.
 ## What it does
 
 1. **Review queue (home)** — a searchable, filterable worklist of pending applications with status
-   tabs (Pending / Approved / Rejected / Needs info), priority flags, and stat tiles. An **AI check**
-   column shows each item's last recommendation (or "Not run"), and rows can be **multi-selected and
-   bulk-verified** in one pass — each label graded against its own filing.
+   tabs (Pending / Approved / Rejected / Needs info), priority flags, colour-coded type/status, and
+   stat tiles. Rows can be **multi-selected and bulk-verified** in one pass — each label graded
+   against its own filing, with the results cached against each application.
 2. **Per-application review** — open an item to see the submitted application data and its label
    side-by-side, run AI verification, and get a rolled-up recommendation (Ready for approval /
    Needs agent review / Likely rejection). Record a disposition (approve / request info / reject).
@@ -26,11 +26,8 @@ Built for the AI-Powered Alcohol Label Verification take-home.
    mismatches, missing fields, and low-confidence reads for human judgment.
 5. **Custom check** (secondary) — an ad-hoc page to upload any label and verify it against an
    application, manual values, or the label's own requirements.
-6. **Match board** — a visual card grid of every preloaded application with its submitted label
-   image; the AI scans each label against its filing and shows the match verdict right on the card
-   (unscanned labels are auto-checked on load, and results are cached so it doesn't re-run).
-7. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
-8. **Accessible UI** designed for non-technical agents across a range of tech comfort.
+6. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
+7. **Accessible UI** designed for non-technical agents across a range of tech comfort.
 
 ## The core design decision
 

@@ -15,11 +15,6 @@ import {
   DISPOSITION_LABEL,
   type Disposition,
 } from "@/lib/dispositions";
-import {
-  loadVerdicts,
-  VERDICTS_CHANGED_EVENT,
-  type StoredVerdict,
-} from "@/lib/verdicts";
 import { bulkVerify, summarize } from "@/lib/bulkVerify";
 import type { ApplicationSummary } from "@/lib/applications";
 
@@ -37,7 +32,6 @@ export default function QueuePage() {
   const router = useRouter();
   const [rows, setRows] = useState<ApplicationSummary[]>([]);
   const [dispositions, setDispositions] = useState<Record<string, Disposition>>({});
-  const [verdicts, setVerdicts] = useState<Record<string, StoredVerdict>>({});
   const [filter, setFilter] = useState<StatusFilter>("all");
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(true);
@@ -58,17 +52,12 @@ export default function QueuePage() {
   }, []);
 
   useEffect(() => {
-    const refresh = () => {
-      setDispositions(loadDispositions());
-      setVerdicts(loadVerdicts());
-    };
+    const refresh = () => setDispositions(loadDispositions());
     refresh();
     window.addEventListener("ttb-dispositions-changed", refresh);
-    window.addEventListener(VERDICTS_CHANGED_EVENT, refresh);
     window.addEventListener("storage", refresh);
     return () => {
       window.removeEventListener("ttb-dispositions-changed", refresh);
-      window.removeEventListener(VERDICTS_CHANGED_EVENT, refresh);
       window.removeEventListener("storage", refresh);
     };
   }, []);
@@ -147,8 +136,8 @@ export default function QueuePage() {
     setBulkError(null);
     setBulkMessage(null);
     try {
-      // Each persisted verdict fires VERDICTS_CHANGED_EVENT → our listener refreshes the "AI check"
-      // column live as results land.
+      // Persist a verdict per label; it surfaces on each application's review page — opening one
+      // restores the result without re-running (and re-spending on) the model.
       const summary = await bulkVerify(targets);
       setBulkMessage(summarize(summary) || null);
       if (summary.error) setBulkError(summary.error);
@@ -296,21 +285,20 @@ export default function QueuePage() {
               <th className="px-4 py-3 font-medium">ABV</th>
               <th className="px-4 py-3 font-medium">Applicant</th>
               <th className="px-4 py-3 font-medium">Priority</th>
-              <th className="px-4 py-3 font-medium">AI check</th>
               <th className="px-4 py-3 font-medium">Status</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-neutral-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-neutral-500">
                   Loading queue…
                 </td>
               </tr>
             )}
             {!loading && visible.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-4 py-10 text-center text-neutral-500">
+                <td colSpan={8} className="px-4 py-10 text-center text-neutral-500">
                   {rows.length === 0
                     ? loadError
                       ? "Couldn't load the queue — please refresh."
@@ -365,9 +353,6 @@ export default function QueuePage() {
                   ) : (
                     <span className="text-neutral-400">—</span>
                   )}
-                </td>
-                <td className="px-4 py-3">
-                  <AiCheckBadge verdict={verdicts[r.id]} />
                 </td>
                 <td className="px-4 py-3">
                   <StatusBadge status={statusOf(r.id)} />
@@ -442,27 +427,6 @@ function TypeBadge({ category }: { category: string }) {
   return (
     <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>
       {category}
-    </span>
-  );
-}
-
-/** The persisted AI recommendation for a row — or "Not run" when it hasn't been verified yet. */
-function AiCheckBadge({ verdict }: { verdict?: StoredVerdict }) {
-  if (!verdict) return <span className="text-neutral-400">Not run</span>;
-  const { level, label } = verdict.recommendation;
-  const cls =
-    level === "approve"
-      ? "text-green-700 dark:text-green-400"
-      : level === "reject"
-        ? "text-red-700 dark:text-red-400"
-        : "text-amber-700 dark:text-amber-400";
-  const short = level === "approve" ? "Ready" : level === "reject" ? "Likely rejection" : "Needs review";
-  return (
-    <span
-      className={`inline-flex items-center gap-1 font-medium ${cls}`}
-      title={`${label} · verified ${new Date(verdict.verifiedAt).toLocaleString()}`}
-    >
-      <span aria-hidden>●</span> {short}
     </span>
   );
 }

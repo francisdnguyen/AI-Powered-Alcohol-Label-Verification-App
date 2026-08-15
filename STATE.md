@@ -49,21 +49,17 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   Creek + Costa Verde → one `/api/batch` 200 → "Verified 2 labels — 1 ready, 1 likely rejection",
   each graded against its own filing (Costa Verde's ABV mismatch → reject).
 - **Persisted AI verdicts.** `lib/verdicts.ts` (localStorage, sibling to `dispositions.ts`) stores
-  the last recommendation + full field review per application. The queue shows an **AI check** column
-  (Ready / Needs review / Likely rejection / Not run) that updates live as verdicts are written;
-  reopening a review restores the saved result (banner + field cards + "Last verified …") **without
-  re-running** the model. A verdict is advisory only — it never sets a disposition; a human still
-  records the decision. Verified live: reopening a bulk-verified item showed the restored result and
-  fired **no** `/api/review` call.
-- **Match board (`/board`).** A visual, at-a-glance version of the queue: a card grid of every
-  preloaded application with its submitted label image, and the AI match verdict shown on each card.
-  Any not-yet-scanned label is **auto-scanned once on load** (bounded to the seeded set); persisted
-  verdicts mean it only spends on genuinely new items and shares results with the queue. Verified
-  live: with 2 apps already scanned, opening the board auto-scanned the other 10 → "Verified 10
-  labels — 6 ready, 1 need review, 3 likely rejection", all 12 cards showing thumbnails + verdicts.
-- **Shared bulk-verify helper.** `lib/bulkVerify.ts` holds the one client path (fetch label →
-  downscale → chunk → POST `/api/batch` queue mode → persist verdict) used by both the queue's
-  "Verify selected" and the board's scan, so the logic lives in exactly one place.
+  the last recommendation + full field review per application. Reopening a review restores the saved
+  result (banner + field cards + "Last verified …") **without re-running** the model. A verdict is
+  advisory only — it never sets a disposition; a human still records the decision. Verified live:
+  reopening a verified item showed the restored result and fired **no** `/api/review` call.
+  (An earlier "AI check" queue column and a visual match board surfaced these verdicts too; both were
+  **removed by owner decision** — the column showed mostly "Not run" and added little, and neither
+  peer console had a board. Verdict persistence + the bulk-verify path stay.)
+- **Bulk-verify helper.** `lib/bulkVerify.ts` holds the client verify path (fetch label → downscale
+  → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected".
+  Bulk-run verdicts surface by making each application's review page restore instantly instead of
+  re-running the model.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
@@ -120,9 +116,8 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   `labelImage` so the queue can bulk-verify), `lib/dispositions.ts` (localStorage human decisions;
   `+ dispositions.test.ts`), `lib/verdicts.ts` (localStorage persisted AI recommendations;
   `+ verdicts.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
-- App: `app/page.tsx` (**review queue** console), `app/board/page.tsx` (**match board** — card grid
-  with label thumbnails + auto-scan), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`, the
-  per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
+- App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
+  the per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
   `app/batch/page.tsx`, `app/layout.tsx` (nav), `app/globals.css`, API routes
   `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`,
   `components/icons.tsx` (dependency-free inline SVGs for the stat-tile/priority/search glyphs).

@@ -1,10 +1,10 @@
 /**
- * Client-side bulk verification, shared by the review queue's "Verify selected" and the match
- * board's auto-scan. Given a set of applications (id + label image path) it fetches each label,
- * downscales it, and POSTs to `/api/batch` in `mode:"queue"` — where each image is paired with its
- * OWN application id — so N different filings are each graded against their own application in as few
- * requests as the per-chunk caps allow. Every finished verdict is persisted via `setVerdict`, which
- * is what fills the queue's "AI check" column and lets a reopened review restore without re-running.
+ * Client-side bulk verification, used by the review queue's "Verify selected". Given a set of
+ * applications (id + label image path) it fetches each label, downscales it, and POSTs to
+ * `/api/batch` in `mode:"queue"` — where each image is paired with its OWN application id — so N
+ * different filings are each graded against their own application in as few requests as the
+ * per-chunk caps allow. Every finished verdict is persisted via `setVerdict`, which is what lets a
+ * reopened review restore without re-running (and re-spending on) the model.
  *
  * The browser is the only place that can read the seeded `/labels/*` images without touching the
  * serverless filesystem (which isn't reliable on Vercel), so the fetch happens here, not on the API.

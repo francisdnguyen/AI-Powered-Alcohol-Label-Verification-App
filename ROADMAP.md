@@ -49,19 +49,21 @@ Fill measured latency numbers into README after the first live run.
 ## Step 7 — Full console (bulk verify + persisted verdicts)  ☑
 Bulk verify from the queue: multi-select rows → "Verify selected" fetches each label and POSTs to
 `/api/batch` in a new `mode:"queue"` (each image paired with its own `applicationId`), so N filings
-are graded in one pass. Persisted AI verdicts (`lib/verdicts.ts`, localStorage) drive an "AI check"
-column (Ready / Needs review / Likely rejection / Not run) and let a reopened review restore its
-result without re-running the model; a human still records the disposition. Verified live in-browser
-(2-label bulk verify graded each against its own filing; reopen restored with no `/api/review` call)
-and `next build` + 50/50 vitest green.
+are graded in one pass. Persisted AI verdicts (`lib/verdicts.ts`, localStorage) let a reopened review
+restore its result without re-running the model; a human still records the disposition. The client
+verify path lives in `lib/bulkVerify.ts`. Verified live in-browser (2-label bulk verify graded each
+against its own filing; reopen restored with no `/api/review` call) and `next build` + 50/50 vitest.
 
-## Step 8 — Match board  ☑
-`app/board/page.tsx`: a visual, at-a-glance version of the queue — a card grid of every preloaded
-application with its submitted label image and the AI match verdict on each card. Not-yet-scanned
-labels are auto-scanned once on load (bounded to the seeded set); persisted verdicts keep it from
-re-spending and share results with the queue. The client verify path is shared in `lib/bulkVerify.ts`
-(used by both the queue and the board). Verified live: opening the board auto-scanned the unscanned
-labels → per-card verdicts + thumbnails, no console errors; `next build` + 50/50 vitest green.
+_Trimmed by owner decision:_ an "AI check" queue column and a visual "match board" (`/board`) once
+surfaced these verdicts too. The column mostly read "Not run" and added little; the board duplicated
+the queue and neither peer console had one, so both were removed. Verdict persistence and the
+bulk-verify path stay.
+
+## Step 8 — Queue visual pass  ☑
+Bring the queue closer to a polished console: stat-tile icons + "Pending review" tile, colour-coded
+Type pills (Spirits / Wine / Beer), a flag glyph on High priority, ○/✓/✕/ℹ on status badges, a search
+magnifier, and **#** + **Applicant** columns (`components/icons.tsx`, dependency-free inline SVGs).
+`next build` + 50/50 vitest green; DOM-verified in-browser, no console errors.
 
 ---
 

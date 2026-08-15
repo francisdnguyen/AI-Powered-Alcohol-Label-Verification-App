@@ -44,12 +44,6 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Queue
             </Link>
             <Link
-              href="/board"
-              className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            >
-              Match board
-            </Link>
-            <Link
               href="/custom"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
