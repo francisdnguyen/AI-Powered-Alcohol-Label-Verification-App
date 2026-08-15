@@ -54,10 +54,11 @@ restore its result without re-running the model; a human still records the dispo
 verify path lives in `lib/bulkVerify.ts`. Verified live in-browser (2-label bulk verify graded each
 against its own filing; reopen restored with no `/api/review` call) and `next build` + 50/50 vitest.
 
-_Trimmed by owner decision:_ an "AI check" queue column and a visual "match board" (`/board`) once
-surfaced these verdicts too. The column mostly read "Not run" and added little; the board duplicated
-the queue and neither peer console had one, so both were removed. Verdict persistence and the
-bulk-verify path stay.
+_Iterated with the owner:_ a first "AI check" column read "Not run" on every unverified row and a
+separate `/board` match board duplicated the queue — both were cut. The column came back in a lighter
+form: a per-row verdict **pill** that appears only once a label has been checked (blank otherwise),
+plus a live `done/total` counter during a bulk run (wired through `bulkVerify`'s `onChange`). The
+board stayed gone — neither peer console had one.
 
 ## Step 8 — Queue visual pass  ☑
 Bring the queue closer to a polished console: stat-tile icons + "Pending review" tile, colour-coded

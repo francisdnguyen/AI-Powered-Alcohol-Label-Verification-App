@@ -147,7 +147,7 @@ export async function POST(request: Request) {
     inputPositions.push(i);
   }
 
-  const processed = await processBatch(inputs, sharedExpected);
+  const processed = await processBatch(inputs);
   processed.forEach((r, k) => {
     results[inputPositions[k]] = { ...r, index: inputPositions[k] };
   });

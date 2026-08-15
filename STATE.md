@@ -49,17 +49,19 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   Creek + Costa Verde → one `/api/batch` 200 → "Verified 2 labels — 1 ready, 1 likely rejection",
   each graded against its own filing (Costa Verde's ABV mismatch → reject).
 - **Persisted AI verdicts.** `lib/verdicts.ts` (localStorage, sibling to `dispositions.ts`) stores
-  the last recommendation + full field review per application. Reopening a review restores the saved
-  result (banner + field cards + "Last verified …") **without re-running** the model. A verdict is
-  advisory only — it never sets a disposition; a human still records the decision. Verified live:
-  reopening a verified item showed the restored result and fired **no** `/api/review` call.
-  (An earlier "AI check" queue column and a visual match board surfaced these verdicts too; both were
-  **removed by owner decision** — the column showed mostly "Not run" and added little, and neither
-  peer console had a board. Verdict persistence + the bulk-verify path stay.)
+  the last recommendation + full field review per application. Two surfaces read it: the queue shows a
+  per-row **AI check** verdict pill (Ready / Needs review / Likely rejection) that appears **only once
+  a label has been checked** — blank otherwise, so the column stays quiet until you verify — and
+  reopening a review restores the saved result (banner + field cards + "Last verified …") **without
+  re-running** the model. A verdict is advisory only — it never sets a disposition; a human still
+  records the decision. Verified live: bulk-verifying two rows filled their pills (● Ready / ● Likely
+  rejection) while others stayed blank; reopening a verified item restored it with **no** `/api/review`
+  call. (An always-on "Not run" column and a separate `/board` match board were tried and removed —
+  the pill is the lighter replacement; neither peer console had a board.)
 - **Bulk-verify helper.** `lib/bulkVerify.ts` holds the client verify path (fetch label → downscale
-  → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected".
-  Bulk-run verdicts surface by making each application's review page restore instantly instead of
-  re-running the model.
+  → chunk → POST `/api/batch` queue mode → persist verdict) used by the queue's "Verify selected". An
+  `onChange` callback drives a live `done/total` counter in the action bar; each persisted verdict
+  fires `VERDICTS_CHANGED_EVENT`, which refreshes the row pills as results land.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field

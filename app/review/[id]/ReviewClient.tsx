@@ -86,13 +86,12 @@ export function ReviewClient({ app }: { app: Application }) {
         const verifiedAt = Date.now();
         focusAfterRun.current = true;
         setResult({ review: payload.review, totalMs: payload.timing?.totalMs, verifiedAt });
-        // Persist so the queue's "AI check" column fills in and reopening restores this result.
+        // Persist so the queue's verdict pill fills in and reopening restores this result.
         setVerdict(app.id, {
           recommendation: recommendationFor(payload.review),
           review: payload.review,
           verifiedAt,
           totalMs: payload.timing?.totalMs,
-          model: payload.model,
         });
       }
     } catch {

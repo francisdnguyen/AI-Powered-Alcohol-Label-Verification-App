@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { loadVerdicts, getVerdict, setVerdict, clearVerdict, type StoredVerdict } from "./verdicts";
+import { loadVerdicts, getVerdict, setVerdict, type StoredVerdict } from "./verdicts";
 import type { ReviewResult } from "./matcher";
 
 const KEY = "ttb-verdicts";
@@ -16,7 +16,6 @@ function sampleVerdict(): StoredVerdict {
     review,
     verifiedAt: 1_700_000_000_000,
     totalMs: 3200,
-    model: "claude-haiku-4-5",
   };
 }
 
@@ -52,13 +51,6 @@ describe("verdicts", () => {
     const newer = { ...sampleVerdict(), verifiedAt: 1_700_000_100_000 };
     setVerdict("app-1", newer);
     expect(getVerdict("app-1")?.verifiedAt).toBe(1_700_000_100_000);
-  });
-
-  it("clears a stored verdict", () => {
-    setVerdict("app-1", sampleVerdict());
-    clearVerdict("app-1");
-    expect(getVerdict("app-1")).toBeUndefined();
-    expect(loadVerdicts()).toEqual({});
   });
 
   it("self-heals corrupt (non-object) storage without throwing", () => {
