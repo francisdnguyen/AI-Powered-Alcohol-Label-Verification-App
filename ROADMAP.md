@@ -60,6 +60,13 @@ form: a per-row verdict **pill** that appears only once a label has been checked
 with an indeterminate "Verifying N labels…" indicator during a bulk run and the pills filling in when
 the single `/api/batch` request resolves. The board stayed gone — neither peer console had one.
 
+## Step 10 — Image-quality outcome  ☑
+Extraction self-reports overall `imageQuality` (clear/partial/poor); a **poor** read becomes its own
+"Needs a clearer photo" recommendation (new `image` level, top precedence) so an unreadable photo is
+never quietly passed or failed — a *photo* problem kept distinct from a *compliance* problem. Blue
+banner on review, "Low photo quality" pill in the queue. `lib/schema.ts` + `lib/anthropic.ts` prompt +
+`lib/matcher.ts`; +2 tests. Verified live (degraded label → `imageQuality: "poor"` end-to-end).
+
 ## Step 9 — Extraction-accuracy eval  ☑
 `eval/run-eval.mjs` + `EVALUATION.md`: scores the vision model's transcription against the labels'
 known printed values (`public/labels/ground-truth.json` — free ground truth, since the labels are

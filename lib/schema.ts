@@ -56,6 +56,14 @@ export const CONFIDENCE_LEVELS = ["high", "medium", "low"] as const;
 export type Confidence = (typeof CONFIDENCE_LEVELS)[number];
 
 /**
+ * Overall legibility of the whole image, self-reported by the model. Lets the app tell a *photo*
+ * problem ("can't read this — send a clearer image") apart from a *compliance* problem, instead of
+ * grading an unreadable label as a pile of mismatches. Distinct from per-field `confidence`.
+ */
+export const IMAGE_QUALITY = ["clear", "partial", "poor"] as const;
+export type ImageQuality = (typeof IMAGE_QUALITY)[number];
+
+/**
  * One transcribed field. `value` is the verbatim text as read from the label,
  * or null when the field is not visible/present. `found` mirrors that in a
  * boolean for convenience, and `confidence` is the model's self-reported
@@ -78,6 +86,9 @@ export const extractedLabelSchema = z.object({
   producerNameAddress: fieldValueSchema,
   countryOfOrigin: fieldValueSchema,
   governmentWarning: fieldValueSchema,
+  // Overall image legibility. `.catch` defaults a missing/invalid value to "clear" so a quality
+  // field can never fail the whole extraction — the safe default is "don't flag".
+  imageQuality: z.enum(IMAGE_QUALITY).catch("clear"),
 });
 
 export type ExtractedLabel = z.infer<typeof extractedLabelSchema>;

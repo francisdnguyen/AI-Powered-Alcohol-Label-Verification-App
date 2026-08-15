@@ -29,6 +29,8 @@ export interface BulkVerifySummary {
   approve: number;
   review: number;
   reject: number;
+  /** Labels the model judged too low-quality to verify. */
+  image: number;
   /** Labels that couldn't be fetched or analyzed. */
   failed: number;
   /** First distinct server/transport error, for surfacing a message. */
@@ -63,7 +65,7 @@ function chunkPairs(pairs: Pair[], maxBytes: number, maxCount: number): Pair[][]
  * per-row pills refreshes them as verdicts land (one burst per resolved chunk).
  */
 export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySummary> {
-  const summary: BulkVerifySummary = { approve: 0, review: 0, reject: 0, failed: 0 };
+  const summary: BulkVerifySummary = { approve: 0, review: 0, reject: 0, image: 0, failed: 0 };
 
   // 1. Fetch + downscale each label into a File paired with its application id.
   const pairs: Pair[] = [];
@@ -125,11 +127,12 @@ export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySum
 
 /** Human-readable roll-up of a bulk run, e.g. "Verified 8 labels — 5 ready, 2 need review; 1 failed". */
 export function summarize(summary: BulkVerifySummary): string {
-  const ok = summary.approve + summary.review + summary.reject;
+  const ok = summary.approve + summary.review + summary.reject + summary.image;
   const parts: string[] = [];
   if (summary.approve) parts.push(`${summary.approve} ready`);
   if (summary.review) parts.push(`${summary.review} need review`);
   if (summary.reject) parts.push(`${summary.reject} likely rejection`);
+  if (summary.image) parts.push(`${summary.image} need a clearer photo`);
   let msg = ok > 0 ? `Verified ${ok} label${ok === 1 ? "" : "s"}` : "";
   if (parts.length) msg += ` — ${parts.join(", ")}`;
   if (summary.failed > 0) msg += `${ok > 0 ? "; " : ""}${summary.failed} could not be checked`;

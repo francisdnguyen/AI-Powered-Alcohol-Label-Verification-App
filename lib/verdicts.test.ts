@@ -8,6 +8,7 @@ const review: ReviewResult = {
   fields: [],
   summary: { match: 5, mismatch: 0, missing: 0, review: 1, total: 6 },
   overall: "attention",
+  imageQuality: "clear",
 };
 
 function sampleVerdict(): StoredVerdict {

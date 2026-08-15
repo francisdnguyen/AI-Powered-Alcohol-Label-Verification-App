@@ -4,6 +4,7 @@ import {
   type Confidence,
   type ExtractedLabel,
   type ExtractTiming,
+  type ImageQuality,
   type LabelFieldKey,
 } from "./schema";
 import { TTB_GOVERNMENT_WARNING, TTB_WARNING_PREFIX } from "./ttb";
@@ -42,6 +43,8 @@ export interface ReviewResult {
   summary: ReviewSummary;
   /** "pass" only when every field cleanly matches; otherwise agent attention needed. */
   overall: "pass" | "attention";
+  /** The model's overall legibility read, passed through so the recommendation can flag a bad photo. */
+  imageQuality: ImageQuality;
 }
 
 /** Full payload returned by POST /api/review. */
@@ -472,10 +475,11 @@ export function reviewLabel(
     fields,
     summary,
     overall: summary.match === summary.total ? "pass" : "attention",
+    imageQuality: extracted.imageQuality,
   };
 }
 
-export type RecommendationLevel = "approve" | "review" | "reject";
+export type RecommendationLevel = "approve" | "review" | "reject" | "image";
 
 export interface RecommendationResult {
   level: RecommendationLevel;
@@ -490,6 +494,16 @@ export interface RecommendationResult {
  */
 export function recommendationFor(review: ReviewResult): RecommendationResult {
   const s = review.summary;
+  // A photo we can't read is a photo problem, not a compliance verdict — surface it as its own
+  // outcome (and above approve/review) so an unreadable label is never quietly passed or failed.
+  if (review.imageQuality === "poor") {
+    return {
+      level: "image",
+      label: "Needs a clearer photo",
+      reason:
+        "The submitted image is too low-quality to verify reliably — request a clearer photo before deciding.",
+    };
+  }
   if (s.mismatch > 0) {
     return {
       level: "reject",

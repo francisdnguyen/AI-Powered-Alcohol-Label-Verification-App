@@ -35,6 +35,7 @@ function buildLabel(
     producerNameAddress: field("Silver Creek Distillers, Frankfort, KY"),
     countryOfOrigin: field("USA"),
     governmentWarning: field(TTB_GOVERNMENT_WARNING),
+    imageQuality: "clear",
     ...overrides,
   };
 }
@@ -288,6 +289,17 @@ describe("recommendationFor", () => {
   it("routes to agent review on a soft flag", () => {
     const review = reviewLabel(buildLabel({ brandName: field("Silver Creek Reserve") }), silverCreekApp);
     expect(recommendationFor(review).level).toBe("review");
+  });
+  it("flags a poor-quality photo above the compliance verdict", () => {
+    // Every field matches, but the image is unreadable — should ask for a clearer photo, not approve.
+    const review = reviewLabel({ ...buildLabel(), imageQuality: "poor" }, silverCreekApp);
+    expect(review.imageQuality).toBe("poor");
+    expect(recommendationFor(review).level).toBe("image");
+  });
+  it("does not flag image quality when the photo is clear or partial", () => {
+    expect(recommendationFor(reviewLabel({ ...buildLabel(), imageQuality: "partial" }, silverCreekApp)).level).toBe(
+      "approve",
+    );
   });
 });
 

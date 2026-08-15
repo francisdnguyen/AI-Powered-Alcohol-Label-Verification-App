@@ -66,6 +66,17 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   tick to show); each persisted verdict fires `VERDICTS_CHANGED_EVENT`, which fills the row pills in
   when the run completes.
 
+**Image-quality outcome ("needs a clearer photo").** Extraction now self-reports an overall
+`imageQuality` (clear / partial / poor — `lib/schema.ts`, prompted in `lib/anthropic.ts`, `.catch`
+defaults to "clear" so it can never fail extraction). A **poor** read becomes its own recommendation —
+"Needs a clearer photo", a new `image` level in `recommendationFor` — that takes precedence over
+approve/review so an unreadable label is never quietly passed or failed; **partial** adds a soft note.
+This keeps a *photo* problem distinct from a *compliance* problem instead of grading an illegible label
+as a pile of mismatches. Consistent with invariant 1: the model only *describes* legibility; the
+deterministic code decides to ask for a better photo. Surfaces as a blue banner on the review page and
+a "Low photo quality" pill in the queue / bulk verify. Verified live: a heavily degraded label →
+`/api/extract` `imageQuality: "poor"` → `/api/review` `review.imageQuality: "poor"`; +2 matcher tests.
+
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
    values + per-field confidence + found/not-found. All grading is deterministic code in

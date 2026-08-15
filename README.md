@@ -18,7 +18,9 @@ Built for the AI-Powered Alcohol Label Verification take-home.
    Likely rejection), and the result is cached so reopening never re-runs.
 2. **Per-application review** — open an item to see the submitted application data and its label
    side-by-side, run AI verification, and get a rolled-up recommendation (Ready for approval /
-   Needs agent review / Likely rejection). Record a disposition (approve / request info / reject).
+   Needs agent review / Likely rejection). If the photo itself is too low-quality to read, that's
+   surfaced as its own **"Needs a clearer photo"** outcome rather than a pile of false mismatches.
+   Record a disposition (approve / request info / reject).
    The AI verdict is **persisted per application**, so reopening an item restores the prior result
    instead of re-running (and re-spending on) the model — a human still records the decision.
 3. **Extracts the seven fields** from the label — brand name, class/type designation, alcohol

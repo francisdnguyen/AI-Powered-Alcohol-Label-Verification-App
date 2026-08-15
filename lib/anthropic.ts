@@ -54,6 +54,7 @@ Rules:
 - If a field is not visible or not present on the label, set its value to null and found to false.
 - Never guess or invent text. If unsure of the exact characters, transcribe your best reading and lower the confidence.
 - confidence reflects how legible THIS field is: "high" = clearly readable, "medium" = partly obscured/angled, "low" = barely legible or uncertain.
+- imageQuality reflects the legibility of the WHOLE image: "clear" = all text sharp and readable, "partial" = some areas blurred/angled/glared but mostly readable, "poor" = large portions blurry, cut off, dark, or illegible. Judge the photo, not whether fields are present.
 - Return your answer only by calling the record_label_fields tool. Do not write prose.`;
 
 /** JSON Schema for one field, matching fieldValueSchema in lib/schema.ts. */
@@ -80,13 +81,21 @@ const fieldJsonSchema = {
 
 const toolInputSchema = {
   type: "object" as const,
-  properties: Object.fromEntries(
-    LABEL_FIELDS.map((key) => [
-      key,
-      { ...fieldJsonSchema, description: FIELD_META[key].hint },
-    ]),
-  ),
-  required: [...LABEL_FIELDS],
+  properties: {
+    ...Object.fromEntries(
+      LABEL_FIELDS.map((key) => [
+        key,
+        { ...fieldJsonSchema, description: FIELD_META[key].hint },
+      ]),
+    ),
+    imageQuality: {
+      type: "string",
+      enum: ["clear", "partial", "poor"],
+      description:
+        "Overall legibility of the whole label image: 'clear', 'partial' (some blur/glare/angle but mostly readable), or 'poor' (large portions illegible).",
+    },
+  },
+  required: [...LABEL_FIELDS, "imageQuality"],
   additionalProperties: false,
 };
 

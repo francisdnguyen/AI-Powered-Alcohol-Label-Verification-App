@@ -202,6 +202,12 @@ export function ReviewClient({ app }: { app: Application }) {
           <section aria-labelledby="results" ref={resultsRef} tabIndex={-1} className="focus:outline-none">
             <RecommendationBanner rec={rec} />
 
+            {result.review.imageQuality === "partial" && rec.level !== "image" && (
+              <p className="mt-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-200">
+                Some of the label was hard to read — double-check the flagged fields, or request a clearer photo.
+              </p>
+            )}
+
             <h2 id="results" className="mt-6 mb-3 text-xl font-bold text-neutral-900 dark:text-neutral-50">
               Field-by-field
               {typeof result.totalMs === "number" && (
@@ -284,7 +290,9 @@ function RecommendationBanner({ rec }: { rec: RecommendationResult }) {
       ? "border-green-300 bg-green-50 text-green-900 dark:border-green-800 dark:bg-green-950/40 dark:text-green-200"
       : rec.level === "reject"
         ? "border-red-300 bg-red-50 text-red-900 dark:border-red-800 dark:bg-red-950/40 dark:text-red-200"
-        : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200";
+        : rec.level === "image"
+          ? "border-blue-300 bg-blue-50 text-blue-900 dark:border-blue-800 dark:bg-blue-950/40 dark:text-blue-200"
+          : "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-800 dark:bg-amber-950/40 dark:text-amber-200";
   return (
     <div className={`rounded-xl border p-4 ${cls}`}>
       <p className="text-sm font-medium uppercase tracking-wide opacity-70">Recommendation</p>

@@ -459,8 +459,17 @@ function VerdictPill({ verdict }: { verdict?: StoredVerdict }) {
       ? "text-green-700 dark:text-green-400"
       : level === "reject"
         ? "text-red-700 dark:text-red-400"
-        : "text-amber-700 dark:text-amber-400";
-  const short = level === "approve" ? "Ready" : level === "reject" ? "Likely rejection" : "Needs review";
+        : level === "image"
+          ? "text-blue-700 dark:text-blue-400"
+          : "text-amber-700 dark:text-amber-400";
+  const short =
+    level === "approve"
+      ? "Ready"
+      : level === "reject"
+        ? "Likely rejection"
+        : level === "image"
+          ? "Low photo quality"
+          : "Needs review";
   return (
     <span
       className={`inline-flex items-center gap-1 font-medium ${cls}`}
