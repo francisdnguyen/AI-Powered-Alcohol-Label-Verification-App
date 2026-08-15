@@ -133,6 +133,17 @@ describe("government warning", () => {
     );
     expect(statusOf(r, "governmentWarning")).toBe("match");
   });
+  it("flags on a verbatim match that bold typeface still needs a visual check", () => {
+    // A photo transcription can confirm the text + caps but not the required bold weight, so the
+    // match note must tell the agent to confirm it visually (Jenny's bold requirement).
+    const r = reviewLabel(
+      buildLabel({ governmentWarning: field(TTB_GOVERNMENT_WARNING) }),
+      silverCreekApp,
+    );
+    const note = r.fields.find((x) => x.key === "governmentWarning")?.note ?? "";
+    expect(note.toLowerCase()).toContain("bold");
+    expect(note.toLowerCase()).toContain("visually");
+  });
   it("flags altered wording as mismatch", () => {
     const altered = TTB_GOVERNMENT_WARNING.replace(
       "birth defects",

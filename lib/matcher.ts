@@ -350,7 +350,13 @@ function gradeGovernmentWarning(extracted: string): Verdict {
   const got = tightenWhitespace(extracted);
   const want = tightenWhitespace(TTB_GOVERNMENT_WARNING);
   if (got === want) {
-    return { status: "match", note: "Government warning is present and verbatim." };
+    // Text + capitalization are verified verbatim. The one thing a photo transcription can't
+    // confirm is the required bold typeface, so ask the agent to eyeball that rather than letting
+    // the app imply a fully-verified warning.
+    return {
+      status: "match",
+      note: "Text and capitalization match verbatim. Bold typeface can't be verified from a photo — confirm it visually.",
+    };
   }
   if (!got.startsWith(TTB_WARNING_PREFIX)) {
     return {
