@@ -43,7 +43,23 @@ export default function BatchPage() {
   const [prep, setPrep] = useState<string | null>(null);
   const [results, setResults] = useState<BatchFileResult[]>([]);
   const [total, setTotal] = useState(0);
+  const [dragging, setDragging] = useState(false);
   const resultsRef = useRef<BatchFileResult[]>([]);
+
+  /** Accept a dropped/chosen file list: keep only images, clear any prior run. Shared by the file
+   *  input and the drop zone so both behave identically. */
+  function chooseFiles(list: FileList | null) {
+    const picked = Array.from(list ?? []).filter((f) => f.type.startsWith("image/"));
+    setResults([]);
+    setTotal(0);
+    setError(null);
+    if (list && list.length > 0 && picked.length === 0) {
+      setError("Please choose image files (JPEG, PNG, or WebP).");
+      setFiles([]);
+      return;
+    }
+    setFiles(picked);
+  }
 
   useEffect(() => {
     fetch("/api/applications")
@@ -169,23 +185,34 @@ export default function BatchPage() {
           <h2 id="b-step-1" className="mb-3 text-xl font-semibold text-neutral-900 dark:text-neutral-100">
             1. Add label photos
           </h2>
-          <label className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-neutral-300 bg-neutral-50 p-8 text-center hover:bg-neutral-100 focus-within:ring-4 focus-within:ring-blue-500/40 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800">
+          <label
+            onDragOver={(e) => {
+              e.preventDefault();
+              setDragging(true);
+            }}
+            onDragLeave={() => setDragging(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setDragging(false);
+              chooseFiles(e.dataTransfer.files);
+            }}
+            className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed p-8 text-center transition-colors focus-within:ring-4 focus-within:ring-blue-500/40 ${
+              dragging
+                ? "border-blue-600 bg-blue-50 dark:bg-blue-950/40"
+                : "border-neutral-300 bg-neutral-50 hover:bg-neutral-100 dark:border-neutral-700 dark:bg-neutral-900 dark:hover:bg-neutral-800"
+            }`}
+          >
             <input
               type="file"
               accept="image/jpeg,image/png,image/webp"
               multiple
               className="sr-only"
-              onChange={(e) => {
-                setResults([]);
-                setTotal(0);
-                setError(null);
-                setFiles(Array.from(e.target.files ?? []));
-              }}
+              onChange={(e) => chooseFiles(e.target.files)}
             />
             <span className="text-base font-medium text-neutral-800 dark:text-neutral-100">
               {files.length > 0
-                ? `${files.length} file${files.length === 1 ? "" : "s"} selected — choose again to replace`
-                : `Tap to choose photos (up to ${MAX_TOTAL_FILES})`}
+                ? `${files.length} file${files.length === 1 ? "" : "s"} selected — choose or drag again to replace`
+                : `Tap to choose photos, or drag them here (up to ${MAX_TOTAL_FILES})`}
             </span>
             <span className="mt-1 text-sm text-neutral-500 dark:text-neutral-400">
               JPEG, PNG, or WebP · large photos are shrunk automatically before upload
