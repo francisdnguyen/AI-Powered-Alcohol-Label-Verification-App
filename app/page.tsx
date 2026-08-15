@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -48,6 +48,8 @@ export default function QueuePage() {
   const [verifyTotal, setVerifyTotal] = useState(0);
   const [bulkMessage, setBulkMessage] = useState<string | null>(null);
   const [bulkError, setBulkError] = useState<string | null>(null);
+  // Controller for the in-flight bulk run, so the Cancel button can abort it.
+  const abortRef = useRef<AbortController | null>(null);
 
   useEffect(() => {
     fetch("/api/applications")
@@ -142,6 +144,8 @@ export default function QueuePage() {
       .map((r) => ({ id: r.id, labelImage: r.labelImage }));
     if (targets.length === 0) return;
 
+    const controller = new AbortController();
+    abortRef.current = controller;
     setVerifying(true);
     setVerifyTotal(targets.length);
     setBulkError(null);
@@ -149,11 +153,13 @@ export default function QueuePage() {
     try {
       // Each persisted verdict fires VERDICTS_CHANGED_EVENT → the row pills fill in when the run
       // completes (the queue's ≤12 selection is a single /api/batch request that resolves at once).
-      const summary = await bulkVerify(targets);
+      const summary = await bulkVerify(targets, controller.signal);
       setBulkMessage(summarize(summary) || null);
       if (summary.error) setBulkError(summary.error);
-      setSelected(new Set());
+      // Keep the selection intact on cancel so the reviewer can retry; clear it after a full run.
+      if (!summary.cancelled) setSelected(new Set());
     } finally {
+      abortRef.current = null;
       setVerifying(false);
     }
   }
@@ -237,23 +243,33 @@ export default function QueuePage() {
               : `${selected.size} selected`}
           </span>
           <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={verifySelected}
-              disabled={verifying || selected.size === 0}
-              className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-700"
-              aria-busy={verifying}
-            >
-              {verifying ? "Verifying…" : "Verify selected"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setSelected(new Set())}
-              disabled={verifying}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-50 dark:text-blue-300 dark:hover:bg-blue-900/40"
-            >
-              Clear
-            </button>
+            {verifying ? (
+              <button
+                type="button"
+                onClick={() => abortRef.current?.abort()}
+                className="rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-blue-800 dark:bg-neutral-900 dark:text-blue-200 dark:hover:bg-blue-950/50"
+              >
+                Cancel
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={verifySelected}
+                  disabled={selected.size === 0}
+                  className="rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-700"
+                >
+                  Verify selected
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelected(new Set())}
+                  className="rounded-lg px-3 py-2 text-sm font-medium text-blue-800 hover:bg-blue-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-300 dark:hover:bg-blue-900/40"
+                >
+                  Clear
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

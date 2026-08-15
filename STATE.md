@@ -65,6 +65,17 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   queue's ≤12 selection is a single `/api/batch` request that resolves at once — no honest per-item
   tick to show); each persisted verdict fires `VERDICTS_CHANGED_EVENT`, which fills the row pills in
   when the run completes.
+- **Cancellable bulk run.** `bulkVerify(targets, signal?)` takes an optional `AbortSignal`, checked
+  before each label fetch and each chunk and forwarded to both `fetch`es. `BulkVerifySummary` gains
+  `cancelled: boolean`; an `AbortError` sets it (never counted as `failed`). Cancel is **client-side
+  only** — an in-flight chunk's server work may still finish, but its result is discarded (the fetch
+  rejects, so no verdict persists for it); any verdicts that already landed are kept. `summarize`
+  leads with the stop ("Verification cancelled." / "Cancelled — verified N labels first (…)"). The
+  queue (`app/page.tsx`) stores the controller in an `abortRef`; while verifying, the action bar
+  shows a single **Cancel** button (calls `abortRef.current?.abort()`) instead of the disabled
+  Verify/Clear pair, and the selection is **kept** on cancel (cleared only after a full run) so a
+  reviewer can retry. Verified live in-browser (12-label run → Cancel → "Verification cancelled.",
+  selection preserved, no verdicts persisted); +5 vitest (`lib/bulkVerify.test.ts`).
 
 **Image-quality outcome ("needs a clearer photo").** Extraction now self-reports an overall
 `imageQuality` (clear / partial / poor — `lib/schema.ts`, prompted in `lib/anthropic.ts`, `.catch`

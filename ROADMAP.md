@@ -60,6 +60,13 @@ form: a per-row verdict **pill** that appears only once a label has been checked
 with an indeterminate "Verifying N labels…" indicator during a bulk run and the pills filling in when
 the single `/api/batch` request resolves. The board stayed gone — neither peer console had one.
 
+_Follow-up — cancellable bulk run:_ `bulkVerify` now accepts an `AbortSignal` (checked before each
+label fetch/chunk, forwarded to both `fetch`es); the action bar shows a **Cancel** button while a run
+is in flight. Cancel is client-side — an in-flight chunk's server work may still finish but its result
+is discarded, and the selection is kept so the reviewer can retry. `BulkVerifySummary.cancelled` +
+`summarize` handle the message. Verified live (12-label run → Cancel → "Verification cancelled.",
+selection preserved); `next build` + 57/57 vitest green.
+
 ## Step 10 — Image-quality outcome  ☑
 Extraction self-reports overall `imageQuality` (clear/partial/poor); a **poor** read becomes its own
 "Needs a clearer photo" recommendation (new `image` level, top precedence) so an unreadable photo is

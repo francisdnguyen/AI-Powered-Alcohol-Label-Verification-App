@@ -33,6 +33,8 @@ export interface BulkVerifySummary {
   image: number;
   /** Labels that couldn't be fetched or analyzed. */
   failed: number;
+  /** True if the run was cancelled (via AbortSignal) before every target was processed. */
+  cancelled: boolean;
   /** First distinct server/transport error, for surfacing a message. */
   error?: string;
 }
@@ -59,19 +61,44 @@ function chunkPairs(pairs: Pair[], maxBytes: number, maxCount: number): Pair[][]
   return chunks;
 }
 
+/** Did this rejection come from an aborted fetch (caller cancelled the run)? */
+function isAbort(e: unknown): boolean {
+  return (e as { name?: string })?.name === "AbortError";
+}
+
 /**
  * Verify a set of applications against their own filings. Never throws — failures are counted into
  * the returned summary. Each persisted verdict fires `VERDICTS_CHANGED_EVENT`, so a caller showing
  * per-row pills refreshes them as verdicts land (one burst per resolved chunk).
+ *
+ * Pass an `AbortSignal` to make the run cancellable: it's checked before each label fetch and before
+ * each chunk, and forwarded to both fetches. Cancel is client-side only — an in-flight chunk's server
+ * work may still finish, but its result is discarded (`fetch` rejects, so no verdict is persisted for
+ * it). On cancel the summary keeps whatever verdicts already landed and sets `cancelled = true`; an
+ * aborted request is never counted as `failed`.
  */
-export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySummary> {
-  const summary: BulkVerifySummary = { approve: 0, review: 0, reject: 0, image: 0, failed: 0 };
+export async function bulkVerify(
+  targets: VerifyTarget[],
+  signal?: AbortSignal,
+): Promise<BulkVerifySummary> {
+  const summary: BulkVerifySummary = {
+    approve: 0,
+    review: 0,
+    reject: 0,
+    image: 0,
+    failed: 0,
+    cancelled: false,
+  };
 
   // 1. Fetch + downscale each label into a File paired with its application id.
   const pairs: Pair[] = [];
   for (const t of targets) {
+    if (signal?.aborted) {
+      summary.cancelled = true;
+      return summary;
+    }
     try {
-      const res = await fetch(t.labelImage);
+      const res = await fetch(t.labelImage, { signal });
       if (!res.ok) {
         summary.failed++;
         continue;
@@ -81,13 +108,21 @@ export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySum
         type: blob.type || "image/png",
       });
       pairs.push({ file: await downscaleImage(raw), id: t.id });
-    } catch {
+    } catch (e) {
+      if (isAbort(e)) {
+        summary.cancelled = true;
+        return summary;
+      }
       summary.failed++;
     }
   }
 
   // 2. POST request-sized chunks; persist each finished verdict as it returns.
   for (const chunk of chunkPairs(pairs, CHUNK_MAX_BYTES, CHUNK_MAX_COUNT)) {
+    if (signal?.aborted) {
+      summary.cancelled = true;
+      break;
+    }
     const fd = new FormData();
     for (const p of chunk) {
       fd.append("images", p.file);
@@ -95,7 +130,7 @@ export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySum
     }
     fd.append("mode", "queue");
     try {
-      const res = await fetch("/api/batch", { method: "POST", body: fd });
+      const res = await fetch("/api/batch", { method: "POST", body: fd, signal });
       const data = await res.json();
       if (!res.ok || !Array.isArray(data.files)) {
         summary.failed += chunk.length;
@@ -116,7 +151,13 @@ export async function bulkVerify(targets: VerifyTarget[]): Promise<BulkVerifySum
           summary.failed++;
         }
       }
-    } catch {
+    } catch (e) {
+      // A cancelled in-flight chunk rejects here; discard its (possibly still-running) server work
+      // rather than counting it as a failure.
+      if (isAbort(e)) {
+        summary.cancelled = true;
+        break;
+      }
       summary.failed += chunk.length;
       summary.error ??= "Could not reach the server while verifying.";
     }
@@ -133,6 +174,15 @@ export function summarize(summary: BulkVerifySummary): string {
   if (summary.review) parts.push(`${summary.review} need review`);
   if (summary.reject) parts.push(`${summary.reject} likely rejection`);
   if (summary.image) parts.push(`${summary.image} need a clearer photo`);
+
+  if (summary.cancelled) {
+    // Cancelled mid-run: lead with the stop, but still credit any verdicts that already landed.
+    if (ok === 0) return "Verification cancelled.";
+    let msg = `Cancelled — verified ${ok} label${ok === 1 ? "" : "s"} first`;
+    if (parts.length) msg += ` (${parts.join(", ")})`;
+    return msg;
+  }
+
   let msg = ok > 0 ? `Verified ${ok} label${ok === 1 ? "" : "s"}` : "";
   if (parts.length) msg += ` — ${parts.join(", ")}`;
   if (summary.failed > 0) msg += `${ok > 0 ? "; " : ""}${summary.failed} could not be checked`;
