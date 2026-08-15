@@ -15,7 +15,8 @@ Claude calls verified locally and on Vercel. Single-label review ~3–4s.
 applications (stat tiles, status tabs, search, priority) → `/review/[id]` shows the filing + label
 side-by-side, "Run AI verification" (POSTs the app's label to `/api/review`), a 3-tier
 recommendation (`recommendationFor` in `lib/matcher.ts`), and a disposition saved to localStorage
-(`lib/dispositions.ts`). The old upload flow moved to `/custom`; `/batch` unchanged. Each app has a
+(`lib/dispositions.ts`). The ad-hoc upload flow lives at `/check` (see below — one adaptive page that
+merged the former `/custom` single check and `/batch`). Each app has a
 generated label image (`scripts/make-sample-labels.mjs`, 12 labels, a few with intentional
 divergences). Verified end-to-end in-browser: queue → open → verify (caught the Costa Verde ABV
 mismatch → "Likely rejection") → reject → queue shows Actioned 1 / Rejected 1.
@@ -152,8 +153,10 @@ a "Low photo quality" pill in the queue / bulk verify. Verified live: a heavily 
   `+ dispositions.test.ts`), `lib/verdicts.ts` (localStorage persisted AI recommendations;
   `+ verdicts.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
 - App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
-  the per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
-  `app/batch/page.tsx`, `app/layout.tsx` (nav), `app/globals.css`, API routes
+  the per-application review + verify + disposition), `app/check/page.tsx` (**one adaptive ad-hoc
+  page** — file count picks the flow: one photo → single detailed check via `/api/review`; several →
+  batch via chunked `/api/batch`; replaced the separate `/custom` + `/batch` pages),
+  `app/layout.tsx` (nav: Queue + Check labels), `app/globals.css`, API routes
   `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`,
   `components/icons.tsx` (dependency-free inline SVGs for the stat-tile/priority/search glyphs).
   Client verify path shared in `lib/bulkVerify.ts`. The queue table adds **#** and **Applicant**

@@ -44,16 +44,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
               Queue
             </Link>
             <Link
-              href="/custom"
+              href="/check"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
-              Custom check
-            </Link>
-            <Link
-              href="/batch"
-              className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
-            >
-              Batch
+              Check labels
             </Link>
           </div>
         </nav>

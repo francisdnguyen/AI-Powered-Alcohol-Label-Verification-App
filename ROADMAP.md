@@ -76,6 +76,14 @@ unified into a client-safe `lib/batchLimits.ts` (single source, no drift) and th
 chunkers collapsed into one generic `chunkBySize`; dangling `AGENTS.md` doc references were repointed.
 `next build` + 60/60 vitest green; refactored cancel flow re-verified live at zero API cost.
 
+_Follow-up — unified ad-hoc check + streamlined inputs:_ merged the separate `/custom` and `/batch`
+pages into one adaptive `app/check/page.tsx` — the photo count picks the flow (one → detailed single
+check via `/api/review`; several → chunked batch via `/api/batch`), keeping the queue as the primary
+console. The single-check manual mode is brand-led with a collapsed "Add more label details" section;
+batch keeps drag-and-drop. Government-warning verbatim matches now flag that bold typeface needs a
+visual check (Jenny's requirement). Nav is Queue + Check labels. Backend unchanged; `next build` +
+61/61 vitest green; adaptive single/batch switch verified live at zero API cost._
+
 ## Step 10 — Image-quality outcome  ☑
 Extraction self-reports overall `imageQuality` (clear/partial/poor); a **poor** read becomes its own
 "Needs a clearer photo" recommendation (new `image` level, top precedence) so an unreadable photo is

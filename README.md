@@ -27,9 +27,10 @@ Built for the AI-Powered Alcohol Label Verification take-home.
    content, net contents, producer name & address, country of origin, and the government warning.
 4. **Grades them against the application** — deterministic, code-side comparison that flags
    mismatches, missing fields, and low-confidence reads for human judgment.
-5. **Custom check** (secondary) — an ad-hoc page to upload any label and verify it against an
-   application, manual values, or the label's own requirements.
-6. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
+5. **Check labels** (secondary) — one adaptive ad-hoc page: add **one** photo for a detailed check
+   (against an application, values you type, or the label's own requirements), or **several** to
+   review them as a batch (each on its own, or all against one filing). The number of photos picks
+   the flow — one page instead of separate single/batch screens.
 7. **Accessible UI** designed for non-technical agents across a range of tech comfort.
 
 ## The core design decision
