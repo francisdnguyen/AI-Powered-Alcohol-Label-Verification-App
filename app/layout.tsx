@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,30 +31,36 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           className="border-b border-black/10 bg-white/80 backdrop-blur dark:border-white/10 dark:bg-neutral-950/80"
         >
           <div className="mx-auto flex w-full max-w-6xl items-center gap-1 px-4 py-3">
-            <a
+            <Link
               href="/"
               className="mr-3 font-semibold text-neutral-900 hover:opacity-80 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-100"
             >
               TTB Label Console
-            </a>
-            <a
+            </Link>
+            <Link
               href="/"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Queue
-            </a>
-            <a
+            </Link>
+            <Link
+              href="/board"
+              className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            >
+              Match board
+            </Link>
+            <Link
               href="/custom"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Custom check
-            </a>
-            <a
+            </Link>
+            <Link
               href="/batch"
               className="rounded px-3 py-1.5 text-sm font-medium text-neutral-700 hover:bg-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-neutral-300 dark:hover:bg-neutral-800"
             >
               Batch
-            </a>
+            </Link>
           </div>
         </nav>
         {children}

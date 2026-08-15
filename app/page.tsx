@@ -10,13 +10,10 @@ import {
 } from "@/lib/dispositions";
 import {
   loadVerdicts,
-  setVerdict,
   VERDICTS_CHANGED_EVENT,
   type StoredVerdict,
 } from "@/lib/verdicts";
-import { recommendationFor } from "@/lib/matcher";
-import { downscaleImage } from "@/lib/imageClient";
-import type { BatchFileResult } from "@/lib/batch";
+import { bulkVerify, summarize } from "@/lib/bulkVerify";
 import type { ApplicationSummary } from "@/lib/applications";
 
 type StatusFilter = "all" | Disposition;
@@ -28,34 +25,6 @@ const STATUS_TABS: { key: StatusFilter; label: string }[] = [
   { key: "rejected", label: "Rejected" },
   { key: "needs-info", label: "Needs info" },
 ];
-
-// Bulk verify reuses the batch pipeline: per-chunk byte budget (under Vercel's ~4.5 MB body limit)
-// and file cap (matches the server's MAX_BATCH_FILES). The queue is small today, so this is almost
-// always one request — the chunking just keeps it correct if the seed list grows past a chunk.
-const CHUNK_MAX_BYTES = 3.6 * 1024 * 1024;
-const CHUNK_MAX_COUNT = 20;
-
-type VerifyPair = { file: File; id: string };
-
-/** Split label/app pairs into request-sized chunks under both a byte budget and a count cap. */
-function chunkPairs(pairs: VerifyPair[], maxBytes: number, maxCount: number): VerifyPair[][] {
-  const chunks: VerifyPair[][] = [];
-  let current: VerifyPair[] = [];
-  let bytes = 0;
-  for (const p of pairs) {
-    const exceedsBytes = bytes + p.file.size > maxBytes && current.length > 0;
-    const exceedsCount = current.length >= maxCount;
-    if (exceedsBytes || exceedsCount) {
-      chunks.push(current);
-      current = [];
-      bytes = 0;
-    }
-    current.push(p);
-    bytes += p.file.size;
-  }
-  if (current.length > 0) chunks.push(current);
-  return chunks;
-}
 
 export default function QueuePage() {
   const router = useRouter();
@@ -165,88 +134,21 @@ export default function QueuePage() {
 
   // --- bulk verify (IG-1) ---
   async function verifySelected() {
-    const ids = rows.filter((r) => selected.has(r.id)).map((r) => r.id);
-    if (ids.length === 0) return;
+    const targets = rows
+      .filter((r) => selected.has(r.id))
+      .map((r) => ({ id: r.id, labelImage: r.labelImage }));
+    if (targets.length === 0) return;
 
     setVerifying(true);
-    setVerifyTotal(ids.length);
+    setVerifyTotal(targets.length);
     setBulkError(null);
     setBulkMessage(null);
-
     try {
-      // Fetch + downscale each selected label into a File paired with its application id. The same
-      // client-fetch path single review uses, so we never touch the serverless filesystem.
-      const rowById = new Map(rows.map((r) => [r.id, r]));
-      const pairs: VerifyPair[] = [];
-      let fetchFailed = 0;
-      for (const id of ids) {
-        const row = rowById.get(id);
-        if (!row) continue;
-        try {
-          const res = await fetch(row.labelImage);
-          if (!res.ok) {
-            fetchFailed++;
-            continue;
-          }
-          const blob = await res.blob();
-          const raw = new File([blob], row.labelImage.split("/").pop() ?? `${id}.png`, {
-            type: blob.type || "image/png",
-          });
-          pairs.push({ file: await downscaleImage(raw), id });
-        } catch {
-          fetchFailed++;
-        }
-      }
-
-      const tally = { approve: 0, review: 0, reject: 0 };
-      let failed = fetchFailed;
-
-      const chunks = chunkPairs(pairs, CHUNK_MAX_BYTES, CHUNK_MAX_COUNT);
-      for (const chunk of chunks) {
-        const fd = new FormData();
-        for (const p of chunk) {
-          fd.append("images", p.file);
-          fd.append("applicationIds", p.id);
-        }
-        fd.append("mode", "queue");
-        try {
-          const res = await fetch("/api/batch", { method: "POST", body: fd });
-          const data = await res.json();
-          if (!res.ok || !Array.isArray(data.files)) {
-            failed += chunk.length;
-            setBulkError(data?.error || `Verification failed (${res.status}).`);
-            continue;
-          }
-          for (const f of data.files as BatchFileResult[]) {
-            if (f.status === "done" && f.review && f.applicationId) {
-              const recommendation = recommendationFor(f.review);
-              // Writing the verdict fires VERDICTS_CHANGED_EVENT → the "AI check" column updates live.
-              setVerdict(f.applicationId, {
-                recommendation,
-                review: f.review,
-                verifiedAt: Date.now(),
-                totalMs: f.timingMs,
-              });
-              tally[recommendation.level]++;
-            } else {
-              failed++;
-            }
-          }
-        } catch {
-          failed += chunk.length;
-          setBulkError("Could not reach the server while verifying.");
-        }
-      }
-
-      const ok = tally.approve + tally.review + tally.reject;
-      const parts: string[] = [];
-      if (tally.approve) parts.push(`${tally.approve} ready`);
-      if (tally.review) parts.push(`${tally.review} need review`);
-      if (tally.reject) parts.push(`${tally.reject} likely rejection`);
-      let msg = ok > 0 ? `Verified ${ok} label${ok === 1 ? "" : "s"}` : "";
-      if (parts.length) msg += ` — ${parts.join(", ")}`;
-      if (failed > 0) msg += `${ok > 0 ? "; " : ""}${failed} could not be checked`;
-      setBulkMessage(msg || null);
+      // Each persisted verdict fires VERDICTS_CHANGED_EVENT → our listener refreshes the "AI check"
+      // column live as results land.
+      const summary = await bulkVerify(targets);
+      setBulkMessage(summarize(summary) || null);
+      if (summary.error) setBulkError(summary.error);
       setSelected(new Set());
     } finally {
       setVerifying(false);

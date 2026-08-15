@@ -55,6 +55,14 @@ result without re-running the model; a human still records the disposition. Veri
 (2-label bulk verify graded each against its own filing; reopen restored with no `/api/review` call)
 and `next build` + 50/50 vitest green.
 
+## Step 8 — Match board  ☑
+`app/board/page.tsx`: a visual, at-a-glance version of the queue — a card grid of every preloaded
+application with its submitted label image and the AI match verdict on each card. Not-yet-scanned
+labels are auto-scanned once on load (bounded to the seeded set); persisted verdicts keep it from
+re-spending and share results with the queue. The client verify path is shared in `lib/bulkVerify.ts`
+(used by both the queue and the board). Verified live: opening the board auto-scanned the unscanned
+labels → per-card verdicts + thumbnails, no console errors; `next build` + 50/50 vitest green.
+
 ---
 
 ## Feature Proposals

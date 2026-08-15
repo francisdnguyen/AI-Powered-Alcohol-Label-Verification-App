@@ -26,8 +26,11 @@ Built for the AI-Powered Alcohol Label Verification take-home.
    mismatches, missing fields, and low-confidence reads for human judgment.
 5. **Custom check** (secondary) — an ad-hoc page to upload any label and verify it against an
    application, manual values, or the label's own requirements.
-6. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
-7. **Accessible UI** designed for non-technical agents across a range of tech comfort.
+6. **Match board** — a visual card grid of every preloaded application with its submitted label
+   image; the AI scans each label against its filing and shows the match verdict right on the card
+   (unscanned labels are auto-checked on load, and results are cached so it doesn't re-run).
+7. **Batch mode** for high-volume review — many labels at once, a few processed at a time.
+8. **Accessible UI** designed for non-technical agents across a range of tech comfort.
 
 ## The core design decision
 

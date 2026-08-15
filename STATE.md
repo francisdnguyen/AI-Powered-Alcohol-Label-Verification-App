@@ -55,6 +55,15 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   re-running** the model. A verdict is advisory only — it never sets a disposition; a human still
   records the decision. Verified live: reopening a bulk-verified item showed the restored result and
   fired **no** `/api/review` call.
+- **Match board (`/board`).** A visual, at-a-glance version of the queue: a card grid of every
+  preloaded application with its submitted label image, and the AI match verdict shown on each card.
+  Any not-yet-scanned label is **auto-scanned once on load** (bounded to the seeded set); persisted
+  verdicts mean it only spends on genuinely new items and shares results with the queue. Verified
+  live: with 2 apps already scanned, opening the board auto-scanned the other 10 → "Verified 10
+  labels — 6 ready, 1 need review, 3 likely rejection", all 12 cards showing thumbnails + verdicts.
+- **Shared bulk-verify helper.** `lib/bulkVerify.ts` holds the one client path (fetch label →
+  downscale → chunk → POST `/api/batch` queue mode → persist verdict) used by both the queue's
+  "Verify selected" and the board's scan, so the logic lives in exactly one place.
 
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
@@ -111,10 +120,12 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   `labelImage` so the queue can bulk-verify), `lib/dispositions.ts` (localStorage human decisions;
   `+ dispositions.test.ts`), `lib/verdicts.ts` (localStorage persisted AI recommendations;
   `+ verdicts.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
-- App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
-  the per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
-  `app/batch/page.tsx`, `app/layout.tsx`, `app/globals.css`, API routes
+- App: `app/page.tsx` (**review queue** console), `app/board/page.tsx` (**match board** — card grid
+  with label thumbnails + auto-scan), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`, the
+  per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
+  `app/batch/page.tsx`, `app/layout.tsx` (nav), `app/globals.css`, API routes
   `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`.
+  Client verify path shared in `lib/bulkVerify.ts`.
 - Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, this file.
 
 ## Open threads
