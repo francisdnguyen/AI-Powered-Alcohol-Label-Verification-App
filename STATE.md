@@ -124,8 +124,11 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   with label thumbnails + auto-scan), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`, the
   per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
   `app/batch/page.tsx`, `app/layout.tsx` (nav), `app/globals.css`, API routes
-  `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`.
-  Client verify path shared in `lib/bulkVerify.ts`.
+  `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`,
+  `components/icons.tsx` (dependency-free inline SVGs for the stat-tile/priority/search glyphs).
+  Client verify path shared in `lib/bulkVerify.ts`. The queue table adds **#** and **Applicant**
+  (producer) columns and color-coded Type pills / status + priority glyphs; `listApplications` now
+  also returns `producerNameAddress`.
 - Docs: `README.md`, `SECURITY.md`, `ROADMAP.md`, this file.
 
 ## Open threads

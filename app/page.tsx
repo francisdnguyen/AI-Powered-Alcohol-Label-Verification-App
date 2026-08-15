@@ -1,8 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import {
+  IconLayers,
+  IconClock,
+  IconFlag,
+  IconCheckCircle,
+  IconSearch,
+} from "@/components/icons";
 import {
   loadDispositions,
   DISPOSITION_LABEL,
@@ -84,10 +91,6 @@ export default function QueuePage() {
     [rows, dispositions],
   );
   const actioned = rows.length - counts.pending;
-  const unverified = useMemo(
-    () => rows.filter((r) => !verdicts[r.id]).length,
-    [rows, verdicts],
-  );
 
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -168,10 +171,30 @@ export default function QueuePage() {
       </header>
 
       <section aria-label="Queue summary" className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatTile label="Applications" value={rows.length} />
-        <StatTile label="Not AI-checked" value={unverified} />
-        <StatTile label="High priority" value={highPriorityPending} tone="amber" />
-        <StatTile label="Actioned" value={actioned} tone="green" />
+        <StatTile
+          label="Applications"
+          value={rows.length}
+          tone="blue"
+          icon={<IconLayers className="h-5 w-5" />}
+        />
+        <StatTile
+          label="Pending review"
+          value={counts.pending}
+          tone="slate"
+          icon={<IconClock className="h-5 w-5" />}
+        />
+        <StatTile
+          label="High priority"
+          value={highPriorityPending}
+          tone="amber"
+          icon={<IconFlag className="h-5 w-5" />}
+        />
+        <StatTile
+          label="Actioned"
+          value={actioned}
+          tone="green"
+          icon={<IconCheckCircle className="h-5 w-5" />}
+        />
       </section>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -192,14 +215,15 @@ export default function QueuePage() {
             </button>
           ))}
         </div>
-        <label className="relative">
+        <label className="relative block">
           <span className="sr-only">Search applications</span>
+          <IconSearch className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-400" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search brand, product, or COLA ID"
-            className="w-64 max-w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+            className="w-64 max-w-full rounded-lg border border-neutral-300 bg-white py-2 pl-9 pr-3 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
           />
         </label>
       </div>
@@ -266,9 +290,11 @@ export default function QueuePage() {
                   disabled={verifying || visibleIds.length === 0}
                 />
               </th>
+              <th className="w-8 px-4 py-3 font-medium">#</th>
               <th className="px-4 py-3 font-medium">Application</th>
               <th className="px-4 py-3 font-medium">Type</th>
               <th className="px-4 py-3 font-medium">ABV</th>
+              <th className="px-4 py-3 font-medium">Applicant</th>
               <th className="px-4 py-3 font-medium">Priority</th>
               <th className="px-4 py-3 font-medium">AI check</th>
               <th className="px-4 py-3 font-medium">Status</th>
@@ -277,14 +303,14 @@ export default function QueuePage() {
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-neutral-500">
+                <td colSpan={9} className="px-4 py-10 text-center text-neutral-500">
                   Loading queue…
                 </td>
               </tr>
             )}
             {!loading && visible.length === 0 && (
               <tr>
-                <td colSpan={7} className="px-4 py-10 text-center text-neutral-500">
+                <td colSpan={9} className="px-4 py-10 text-center text-neutral-500">
                   {rows.length === 0
                     ? loadError
                       ? "Couldn't load the queue — please refresh."
@@ -293,7 +319,7 @@ export default function QueuePage() {
                 </td>
               </tr>
             )}
-            {visible.map((r) => (
+            {visible.map((r, i) => (
               <tr
                 key={r.id}
                 onClick={() => router.push(`/review/${r.id}`)}
@@ -309,6 +335,7 @@ export default function QueuePage() {
                     disabled={verifying}
                   />
                 </td>
+                <td className="px-4 py-3 tabular-nums text-neutral-400">{i + 1}</td>
                 <td className="px-4 py-3">
                   <Link
                     href={`/review/${r.id}`}
@@ -321,14 +348,19 @@ export default function QueuePage() {
                     {r.ttbId} · {r.productName}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-neutral-700 dark:text-neutral-300">{r.category}</td>
+                <td className="px-4 py-3">
+                  <TypeBadge category={r.category} />
+                </td>
                 <td className="px-4 py-3 tabular-nums text-neutral-700 dark:text-neutral-300">
                   {r.alcoholContent}
                 </td>
+                <td className="px-4 py-3 text-neutral-600 dark:text-neutral-400">
+                  {applicantName(r.producerNameAddress)}
+                </td>
                 <td className="px-4 py-3">
                   {r.priority === "high" ? (
-                    <span className="inline-flex items-center gap-1 text-amber-700 dark:text-amber-400">
-                      <span aria-hidden>●</span> High
+                    <span className="inline-flex items-center gap-1 font-medium text-amber-700 dark:text-amber-400">
+                      <IconFlag className="h-3.5 w-3.5" /> High
                     </span>
                   ) : (
                     <span className="text-neutral-400">—</span>
@@ -349,28 +381,68 @@ export default function QueuePage() {
   );
 }
 
+/** Producer/importer shown in the queue's Applicant column — just the entity name, no address. */
+function applicantName(producer?: string | null): string {
+  if (!producer) return "—";
+  return producer.split(",")[0].trim();
+}
+
+const STAT_ICON_TONES = {
+  neutral: "bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-300",
+  blue: "bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300",
+  slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+  amber: "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300",
+  green: "bg-green-100 text-green-700 dark:bg-green-950/60 dark:text-green-300",
+} as const;
+
 function StatTile({
   label,
   value,
+  icon,
   tone = "neutral",
 }: {
   label: string;
   value: number;
-  tone?: "neutral" | "amber" | "green";
+  icon?: ReactNode;
+  tone?: keyof typeof STAT_ICON_TONES;
 }) {
-  const toneCls =
+  const valueCls =
     tone === "amber"
       ? "text-amber-700 dark:text-amber-400"
       : tone === "green"
         ? "text-green-700 dark:text-green-400"
         : "text-neutral-900 dark:text-neutral-100";
   return (
-    <div className="rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
-      <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
-        {label}
+    <div className="flex items-center gap-3 rounded-xl border border-black/10 bg-white p-4 dark:border-white/10 dark:bg-neutral-900">
+      {icon && (
+        <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-lg ${STAT_ICON_TONES[tone]}`}>
+          {icon}
+        </span>
+      )}
+      <div>
+        <div className="text-xs uppercase tracking-wide text-neutral-500 dark:text-neutral-400">
+          {label}
+        </div>
+        <div className={`mt-0.5 text-2xl font-bold tabular-nums ${valueCls}`}>{value}</div>
       </div>
-      <div className={`mt-1 text-2xl font-bold tabular-nums ${toneCls}`}>{value}</div>
     </div>
+  );
+}
+
+/** Color-coded beverage-type pill (Spirits / Wine / Beer). */
+function TypeBadge({ category }: { category: string }) {
+  const cls =
+    category === "Spirits"
+      ? "bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300"
+      : category === "Wine"
+        ? "bg-rose-100 text-rose-800 dark:bg-rose-950/50 dark:text-rose-300"
+        : category === "Beer"
+          ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-950/50 dark:text-yellow-300"
+          : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-300";
+  return (
+    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${cls}`}>
+      {category}
+    </span>
   );
 }
 
@@ -402,8 +474,17 @@ function StatusBadge({ status }: { status: Disposition }) {
     rejected: "bg-red-700 text-white",
     "needs-info": "bg-amber-500 text-black",
   };
+  const sym: Record<Disposition, string> = {
+    pending: "○",
+    approved: "✓",
+    rejected: "✕",
+    "needs-info": "ℹ",
+  };
   return (
-    <span className={`inline-block rounded-full px-2.5 py-1 text-xs font-semibold ${cls[status]}`}>
+    <span
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${cls[status]}`}
+    >
+      <span aria-hidden>{sym[status]}</span>
       {DISPOSITION_LABEL[status]}
     </span>
   );

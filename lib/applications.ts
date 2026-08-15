@@ -209,7 +209,7 @@ export function getApplication(id: string): Application | undefined {
  */
 export function listApplications() {
   return APPLICATIONS.map(
-    ({ id, ttbId, brandName, productName, category, classType, alcoholContent, priority, labelImage }) => ({
+    ({
       id,
       ttbId,
       brandName,
@@ -219,6 +219,18 @@ export function listApplications() {
       alcoholContent,
       priority,
       labelImage,
+      producerNameAddress,
+    }) => ({
+      id,
+      ttbId,
+      brandName,
+      productName,
+      category,
+      classType,
+      alcoholContent,
+      priority,
+      labelImage,
+      producerNameAddress,
     }),
   );
 }
