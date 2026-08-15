@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import type { ReviewMode, ReviewResponse } from "@/lib/matcher";
+import type { BeverageCategory, ReviewMode, ReviewResponse } from "@/lib/matcher";
 import type { BatchFileResult } from "@/lib/batch";
 import { downscaleImage, chunkFiles } from "@/lib/imageClient";
 import { CHUNK_MAX_BYTES, CHUNK_MAX_COUNT } from "@/lib/batchLimits";
@@ -60,6 +60,9 @@ export default function CheckPage() {
   // Single-check state.
   const [mode, setMode] = useState<ReviewMode>("application");
   const [manual, setManual] = useState<Record<string, string>>({});
+  // Expected beverage family for a manual check: "auto" trusts what we detect from the label's
+  // class/type; an explicit pick is compared against that detection.
+  const [expectedBeverage, setExpectedBeverage] = useState<"auto" | BeverageCategory>("auto");
   const [result, setResult] = useState<ReviewResponse | null>(null);
 
   // Batch state (its own mode, so it never collides with the single-check modes).
@@ -395,6 +398,25 @@ export default function CheckPage() {
                     value={manual.brandName ?? ""}
                     onChange={(v) => setManual((m) => ({ ...m, brandName: v }))}
                   />
+                  <div>
+                    <label
+                      htmlFor="beverageType"
+                      className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+                    >
+                      Beverage type
+                    </label>
+                    <select
+                      id="beverageType"
+                      value={expectedBeverage}
+                      onChange={(e) => setExpectedBeverage(e.target.value as "auto" | BeverageCategory)}
+                      className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 sm:w-64"
+                    >
+                      <option value="auto">Auto (detect from label)</option>
+                      <option value="Beer">Beer</option>
+                      <option value="Wine">Wine</option>
+                      <option value="Spirits">Spirits</option>
+                    </select>
+                  </div>
                   <details className="rounded-lg border border-neutral-200 dark:border-neutral-800">
                     <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">
                       Add more label details (optional)
@@ -468,6 +490,10 @@ export default function CheckPage() {
               )}
             </div>
             <OverallBanner result={result} />
+            <BeverageTypeNote
+              detected={result.review.beverageType}
+              expected={result.mode === "manual" ? expectedBeverage : "auto"}
+            />
             <ul className="mt-4 space-y-3">
               {result.review.fields.map((f) => (
                 <FieldResultCard key={f.key} field={f} />
@@ -592,6 +618,40 @@ function ModeRadio({
         <span className="block text-sm text-neutral-500 dark:text-neutral-400">{desc}</span>
       </span>
     </label>
+  );
+}
+
+/**
+ * Shows the beer/wine/spirits family we detected from the label's class/type, and — when the agent
+ * picked an expected type rather than "Auto" — whether it agrees.
+ */
+function BeverageTypeNote({
+  detected,
+  expected,
+}: {
+  detected: BeverageCategory | null;
+  expected: "auto" | BeverageCategory;
+}) {
+  if (!detected) {
+    if (expected === "auto") return null;
+    return (
+      <p className="mt-3 rounded-lg border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300">
+        Couldn&apos;t determine the beverage type from the label&apos;s class/type designation.
+      </p>
+    );
+  }
+  const mismatch = expected !== "auto" && expected !== detected;
+  return (
+    <p
+      className={`mt-3 rounded-lg border px-4 py-2.5 text-sm ${
+        mismatch
+          ? "border-amber-300 bg-amber-50 text-amber-900 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-100"
+          : "border-neutral-200 bg-neutral-50 text-neutral-600 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300"
+      }`}
+    >
+      Beverage type: <strong>{detected}</strong> (detected from the class/type designation).
+      {mismatch && ` You selected ${expected} — the label looks like ${detected}.`}
+    </p>
   );
 }
 

@@ -38,6 +38,9 @@ export interface ReviewSummary {
   total: number;
 }
 
+/** Coarse beverage family — a level above the TTB class/type designation. */
+export type BeverageCategory = "Beer" | "Wine" | "Spirits";
+
 export interface ReviewResult {
   fields: FieldResult[];
   summary: ReviewSummary;
@@ -45,6 +48,13 @@ export interface ReviewResult {
   overall: "pass" | "attention";
   /** The model's overall legibility read, passed through so the recommendation can flag a bad photo. */
   imageQuality: ImageQuality;
+  /**
+   * Best-effort Beer/Wine/Spirits classification derived *deterministically* from the class/type
+   * designation the model read (e.g. "IPA" → Beer, "Tawny Port" → Wine, "Straight Bourbon" →
+   * Spirits). Null when the class/type is missing or unrecognized. The model still only transcribes;
+   * this categorization is plain code (invariant 1), and the UI lets an agent override it.
+   */
+  beverageType: BeverageCategory | null;
 }
 
 /** Full payload returned by POST /api/review. */
@@ -406,6 +416,52 @@ function gradeField(
 }
 
 // ---------------------------------------------------------------------------
+// Beverage-type detection (deterministic, from the class/type designation)
+// ---------------------------------------------------------------------------
+
+// Checked in order — Beer before Wine so "Porter" (a beer) isn't caught by Wine's "port".
+const BEVERAGE_KEYWORDS: { category: BeverageCategory; terms: string[] }[] = [
+  {
+    category: "Beer",
+    terms: [
+      "beer", "lager", "ale", "ipa", "stout", "porter", "pilsner", "pilsener", "saison",
+      "bock", "hefeweizen", "weizen", "wheat", "kolsch", "kölsch", "gose", "dunkel", "malt liquor",
+    ],
+  },
+  {
+    category: "Wine",
+    terms: [
+      "wine", "cabernet", "merlot", "chardonnay", "sauvignon", "pinot", "riesling", "rosé", "rose",
+      "port", "sherry", "sparkling", "champagne", "prosecco", "zinfandel", "syrah", "shiraz",
+      "malbec", "tempranillo", "grenache", "vermouth", "brut", "moscato", "muscat", "sangiovese",
+      "chianti", "rioja", "sauternes", "gewürztraminer", "gewurztraminer",
+    ],
+  },
+  {
+    category: "Spirits",
+    terms: [
+      "vodka", "whiskey", "whisky", "bourbon", "rye", "scotch", "gin", "rum", "tequila", "mezcal",
+      "brandy", "cognac", "liqueur", "reposado", "añejo", "anejo", "blanco", "spirit", "schnapps",
+      "absinthe", "grappa", "aquavit", "akvavit", "eau-de-vie",
+    ],
+  },
+];
+
+/**
+ * Best-effort Beer/Wine/Spirits classification from a class/type designation. Substring, case-
+ * insensitive; returns the first family whose keyword appears, or null if none match. Deterministic
+ * and unit-tested — the model never decides this.
+ */
+export function detectBeverageType(classType?: string | null): BeverageCategory | null {
+  if (!classType) return null;
+  const lc = classType.toLowerCase();
+  for (const { category, terms } of BEVERAGE_KEYWORDS) {
+    if (terms.some((t) => lc.includes(t))) return category;
+  }
+  return null;
+}
+
+// ---------------------------------------------------------------------------
 // Public entry point
 // ---------------------------------------------------------------------------
 
@@ -477,11 +533,14 @@ export function reviewLabel(
   };
   for (const f of fields) summary[f.status]++;
 
+  const classTypeValue = fields.find((f) => f.key === "classType")?.extracted ?? null;
+
   return {
     fields,
     summary,
     overall: summary.match === summary.total ? "pass" : "attention",
     imageQuality: extracted.imageQuality,
+    beverageType: detectBeverageType(classTypeValue),
   };
 }
 

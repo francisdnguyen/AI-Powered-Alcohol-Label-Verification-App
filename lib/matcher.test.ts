@@ -7,6 +7,7 @@ import {
   parseVolumeMl,
   reviewLabel,
   recommendationFor,
+  detectBeverageType,
   type ApplicationData,
 } from "./matcher";
 import { TTB_GOVERNMENT_WARNING } from "./ttb";
@@ -169,6 +170,39 @@ describe("government warning", () => {
       silverCreekApp,
     );
     expect(statusOf(r, "governmentWarning")).toBe("missing");
+  });
+});
+
+// --- beverage-type detection -----------------------------------------------
+
+describe("detectBeverageType", () => {
+  it("classifies spirits from the class/type designation", () => {
+    for (const ct of ["Vodka", "Straight Bourbon", "London Dry Gin", "Reposado Tequila", "Aged Rum"]) {
+      expect(detectBeverageType(ct)).toBe("Spirits");
+    }
+  });
+  it("classifies wine", () => {
+    for (const ct of ["Cabernet Sauvignon", "Tawny Port", "Rosé", "Brut Sparkling", "Sauvignon Blanc"]) {
+      expect(detectBeverageType(ct)).toBe("Wine");
+    }
+  });
+  it("classifies beer", () => {
+    for (const ct of ["IPA", "Pale Ale", "Pilsner", "Imperial Stout", "Helles Lager"]) {
+      expect(detectBeverageType(ct)).toBe("Beer");
+    }
+  });
+  it("keeps Porter a beer, not a wine (order guards the 'port' substring)", () => {
+    expect(detectBeverageType("Robust Porter")).toBe("Beer");
+    expect(detectBeverageType("Tawny Port")).toBe("Wine");
+  });
+  it("returns null for empty or unrecognized class/type", () => {
+    expect(detectBeverageType(null)).toBeNull();
+    expect(detectBeverageType("")).toBeNull();
+    expect(detectBeverageType("Mystery Beverage")).toBeNull();
+  });
+  it("surfaces on the review result from the extracted class/type", () => {
+    const r = reviewLabel(buildLabel({ classType: field("India Pale Ale") }), silverCreekApp);
+    expect(r.beverageType).toBe("Beer");
   });
 });
 

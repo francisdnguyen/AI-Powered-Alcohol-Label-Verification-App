@@ -30,7 +30,9 @@ Built for the AI-Powered Alcohol Label Verification take-home.
 5. **Check labels** (secondary) — one adaptive ad-hoc page: add **one** photo for a detailed check
    (against an application, values you type, or the label's own requirements), or **several** to
    review them as a batch (each on its own, or all against one filing). The number of photos picks
-   the flow — one page instead of separate single/batch screens.
+   the flow — one page instead of separate single/batch screens. The type-in flow leads with the
+   brand name and **auto-detects the beer/wine/spirits family** from the label's class/type (an agent
+   can override it) — the detection is deterministic code, not a second model call.
 7. **Accessible UI** designed for non-technical agents across a range of tech comfort.
 
 ## The core design decision

@@ -9,6 +9,7 @@ const review: ReviewResult = {
   summary: { match: 5, mismatch: 0, missing: 0, review: 1, total: 6 },
   overall: "attention",
   imageQuality: "clear",
+  beverageType: null,
 };
 
 function sampleVerdict(): StoredVerdict {
