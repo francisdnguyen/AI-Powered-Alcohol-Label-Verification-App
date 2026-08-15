@@ -202,10 +202,14 @@ export function getApplication(id: string): Application | undefined {
   return APPLICATIONS.find((a) => a.id === id);
 }
 
-/** Queue rows for the console — the fields shown in the worklist table (no heavy payload). */
+/**
+ * Queue rows for the console — the fields shown in the worklist table (no heavy payload). Carries
+ * `labelImage` so the queue can bulk-verify: the browser fetches each label and uploads it (the same
+ * client-fetch path single review uses, which keeps us off the serverless filesystem on Vercel).
+ */
 export function listApplications() {
   return APPLICATIONS.map(
-    ({ id, ttbId, brandName, productName, category, classType, alcoholContent, priority }) => ({
+    ({ id, ttbId, brandName, productName, category, classType, alcoholContent, priority, labelImage }) => ({
       id,
       ttbId,
       brandName,
@@ -214,6 +218,7 @@ export function listApplications() {
       classType,
       alcoholContent,
       priority,
+      labelImage,
     }),
   );
 }

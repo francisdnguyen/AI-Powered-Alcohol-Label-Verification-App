@@ -38,6 +38,8 @@ export interface BatchFileResult {
   review?: ReviewResult;
   timingMs?: number;
   error?: string;
+  /** Echoed back in queue mode so the client can persist the verdict against the right application. */
+  applicationId?: string;
 }
 
 /** Run `worker` over items with at most `limit` in flight at once. */
@@ -62,12 +64,23 @@ export async function runPool<T>(
 export interface BatchInput {
   buffer: Buffer;
   filename: string;
+  /**
+   * Per-file expected values. When this key is present it overrides the shared `expected` argument —
+   * that is what lets queue mode grade each label against its *own* application (many labels, many
+   * filings) rather than all against one. Absent → the chunk's shared expected is used.
+   */
+  expected?: ApplicationData | null;
+  /** Echoed onto the result so the client can map a verdict back to its application. */
+  applicationId?: string;
 }
 
 /**
  * Process one chunk of labels and return a per-file result for each. Never rejects: a failure on
  * one label (bad image, Claude error) is captured as that file's
  * `error` result so the rest of the chunk still comes back.
+ *
+ * `expected` is the shared comparison target (self-check → null, or one application for the whole
+ * chunk). A file may override it with its own `input.expected` (queue mode).
  */
 export async function processBatch(
   inputs: BatchInput[],
@@ -77,14 +90,19 @@ export async function processBatch(
     index,
     filename: input.filename,
     status: "pending",
+    applicationId: input.applicationId,
   }));
 
   await runPool(inputs, BATCH_CONCURRENCY, async (input, index) => {
     const started = Date.now();
+    // A present `expected` key (even if null) overrides the shared target; absent falls back.
+    const target = Object.prototype.hasOwnProperty.call(input, "expected")
+      ? (input.expected ?? null)
+      : expected;
     try {
       const normalized = await prepareImages(input.buffer);
       const extracted = await extractLabel(normalized);
-      const review = reviewLabel(extracted, expected);
+      const review = reviewLabel(extracted, target);
       results[index] = {
         index,
         filename: input.filename,
@@ -92,6 +110,7 @@ export async function processBatch(
         review,
         overall: review.overall,
         timingMs: Date.now() - started,
+        applicationId: input.applicationId,
       };
     } catch (err) {
       results[index] = {
@@ -100,6 +119,7 @@ export async function processBatch(
         status: "error",
         error: err instanceof Error ? err.message : "Could not analyze this label.",
         timingMs: Date.now() - started,
+        applicationId: input.applicationId,
       };
     }
   });

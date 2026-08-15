@@ -46,6 +46,15 @@ key server-only.
 with `ANTHROPIC_API_KEY` + run the deferred live tests — needs the user's Vercel login + key.
 Fill measured latency numbers into README after the first live run.
 
+## Step 7 — Full console (bulk verify + persisted verdicts)  ☑
+Bulk verify from the queue: multi-select rows → "Verify selected" fetches each label and POSTs to
+`/api/batch` in a new `mode:"queue"` (each image paired with its own `applicationId`), so N filings
+are graded in one pass. Persisted AI verdicts (`lib/verdicts.ts`, localStorage) drive an "AI check"
+column (Ready / Needs review / Likely rejection / Not run) and let a reopened review restore its
+result without re-running the model; a human still records the disposition. Verified live in-browser
+(2-label bulk verify graded each against its own filing; reopen restored with no `/api/review` call)
+and `next build` + 50/50 vitest green.
+
 ---
 
 ## Feature Proposals

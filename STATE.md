@@ -38,6 +38,24 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
   axis. `extractLabel` now takes an array and sends N image blocks as "sections of the same label".
   Verified live: a 2000×3000 image tiled into 2, all 7 fields extracted at high confidence.
 
+**Full console (bulk verify + persisted verdicts):**
+- **Bulk verify from the queue.** Rows are multi-selectable (per-row + select-all-visible
+  checkboxes); "Verify selected" fetches each label client-side, downscales it, and POSTs to
+  `/api/batch` in a new `mode:"queue"` where each image is paired with its OWN application via a
+  parallel `applicationIds[]` field — so N different filings are graded correctly in one request
+  (not all against one app). `lib/batch.ts` `processBatch` now takes a per-input `expected` override;
+  `BatchFileResult` echoes `applicationId`. The queue caps a request at `MAX_BATCH_FILES` and chunks
+  if the seed list ever exceeds it (12 apps today → one request). Verified live: selecting Silver
+  Creek + Costa Verde → one `/api/batch` 200 → "Verified 2 labels — 1 ready, 1 likely rejection",
+  each graded against its own filing (Costa Verde's ABV mismatch → reject).
+- **Persisted AI verdicts.** `lib/verdicts.ts` (localStorage, sibling to `dispositions.ts`) stores
+  the last recommendation + full field review per application. The queue shows an **AI check** column
+  (Ready / Needs review / Likely rejection / Not run) that updates live as verdicts are written;
+  reopening a review restores the saved result (banner + field cards + "Last verified …") **without
+  re-running** the model. A verdict is advisory only — it never sets a disposition; a human still
+  records the decision. Verified live: reopening a bulk-verified item showed the restored result and
+  fired **no** `/api/review` call.
+
 ## Architecture invariants (do not violate without updating this file)
 1. **Claude transcribes only; it never decides match/mismatch.** Extraction returns raw field
    values + per-field confidence + found/not-found. All grading is deterministic code in
@@ -57,7 +75,10 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
    synchronously inside its POST and returns results inline — no job store, no polling. This replaced
    an async-job + poll design that 404'd on Vercel (per-instance job Map). Whole-batch total (300) is
    enforced client-side; per-chunk sizing is bounded by the ~4.5 MB body limit and the measured
-   ~1.19s/label throughput under the 60s function limit.
+   ~1.19s/label throughput under the 60s function limit. `/api/batch` has three modes: `self`
+   (each label on its own), `application` (all files vs one filing), and `queue` (each file paired
+   with its own `applicationId` — the queue's bulk verify). All three run through the same
+   synchronous chunk path.
 5. **Government warning is matched verbatim** (strict); other fields tolerant-normalized. A
    photo cannot verify **bold** formatting — known, documented limit.
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
@@ -86,8 +107,10 @@ The synchronous rewrite fixes it. Verified: local 3-chunk run all `done` inline,
 - Lib: `lib/anthropic.ts` (Claude vision transcription), `lib/matcher.ts` (grading +
   `recommendationFor`; `+ matcher.test.ts`), `lib/image.ts` (server prep/tiling),
   `lib/imageClient.ts` (browser downscale + chunk), `lib/batch.ts`, `lib/rateLimit.ts`,
-  `lib/applications.ts` (12 mock COLA apps + queue metadata), `lib/dispositions.ts` (localStorage
-  agent decisions; `+ dispositions.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
+  `lib/applications.ts` (12 mock COLA apps + queue metadata; `listApplications` now includes
+  `labelImage` so the queue can bulk-verify), `lib/dispositions.ts` (localStorage human decisions;
+  `+ dispositions.test.ts`), `lib/verdicts.ts` (localStorage persisted AI recommendations;
+  `+ verdicts.test.ts`), `lib/ttb.ts`, `lib/schema.ts`.
 - App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
   the per-application review + verify + disposition), `app/custom/page.tsx` (ad-hoc upload check),
   `app/batch/page.tsx`, `app/layout.tsx`, `app/globals.css`, API routes

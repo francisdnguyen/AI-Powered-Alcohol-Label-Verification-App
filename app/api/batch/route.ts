@@ -49,13 +49,28 @@ export async function POST(request: Request) {
     );
   }
 
-  // Expected values: self-check, or one application matched against every file.
+  // Expected values by mode:
+  //  - "self":        each label checked on its own (no expected values).
+  //  - "application": one application matched against every file (a shipment of one product).
+  //  - "queue":       each file paired with its OWN application via a parallel `applicationIds`
+  //                   array — this is what the review queue's bulk-verify uses so N different
+  //                   filings can be graded in one request.
   const mode = form.get("mode");
-  if (mode !== "self" && mode !== "application") {
+  if (mode !== "self" && mode !== "application" && mode !== "queue") {
     return NextResponse.json({ error: "Choose a batch mode." }, { status: 400 });
   }
 
-  let expected: ApplicationData | null = null;
+  const toExpected = (app: ReturnType<typeof getApplication> & object): ApplicationData => ({
+    brandName: app.brandName,
+    classType: app.classType,
+    alcoholContent: app.alcoholContent,
+    netContents: app.netContents,
+    producerNameAddress: app.producerNameAddress,
+    countryOfOrigin: app.countryOfOrigin,
+  });
+
+  let sharedExpected: ApplicationData | null = null;
+  let queueIds: string[] | null = null;
   if (mode === "application") {
     const id = form.get("applicationId");
     if (typeof id !== "string" || id === "") {
@@ -65,19 +80,21 @@ export async function POST(request: Request) {
     if (!app) {
       return NextResponse.json({ error: "That application was not found." }, { status: 404 });
     }
-    expected = {
-      brandName: app.brandName,
-      classType: app.classType,
-      alcoholContent: app.alcoholContent,
-      netContents: app.netContents,
-      producerNameAddress: app.producerNameAddress,
-      countryOfOrigin: app.countryOfOrigin,
-    };
+    sharedExpected = toExpected(app);
+  } else if (mode === "queue") {
+    queueIds = form.getAll("applicationIds").filter((v): v is string => typeof v === "string");
+    if (queueIds.length !== files.length) {
+      return NextResponse.json(
+        { error: "Each label must be paired with exactly one application." },
+        { status: 400 },
+      );
+    }
   }
 
   // Validate per file: an invalid file (bad MIME / oversized) gets an inline error result so it
   // never fails the other labels in the same chunk. Valid files are analyzed and merged back by
-  // their original position.
+  // their original position. In queue mode the per-file expected values are resolved here too, so an
+  // unknown application id degrades to that one file's error instead of failing the request.
   const results: BatchFileResult[] = new Array(files.length);
   const inputs: BatchInput[] = [];
   const inputPositions: number[] = [];
@@ -90,20 +107,47 @@ export async function POST(request: Request) {
         status: "error",
         error: `"${f.name}" is not a supported image (use JPEG, PNG, or WebP).`,
       };
-    } else if (f.size > MAX_UPLOAD_BYTES) {
+      continue;
+    }
+    if (f.size > MAX_UPLOAD_BYTES) {
       results[i] = {
         index: i,
         filename: f.name,
         status: "error",
         error: `"${f.name}" is too large (max 8 MB each).`,
       };
-    } else {
-      inputs.push({ buffer: Buffer.from(await f.arrayBuffer()), filename: f.name });
-      inputPositions.push(i);
+      continue;
     }
+
+    let expected: ApplicationData | null = sharedExpected;
+    let applicationId: string | undefined;
+    if (mode === "queue") {
+      const id = queueIds![i];
+      const app = getApplication(id);
+      if (!app) {
+        results[i] = {
+          index: i,
+          filename: f.name,
+          status: "error",
+          error: `Application "${id}" was not found.`,
+          applicationId: id,
+        };
+        continue;
+      }
+      applicationId = app.id;
+      expected = toExpected(app);
+    }
+
+    inputs.push({
+      buffer: Buffer.from(await f.arrayBuffer()),
+      filename: f.name,
+      expected,
+      applicationId,
+    });
+    inputPositions.push(i);
   }
 
-  const processed = await processBatch(inputs, expected);
+  const processed = await processBatch(inputs, sharedExpected);
   processed.forEach((r, k) => {
     results[inputPositions[k]] = { ...r, index: inputPositions[k] };
   });

@@ -6,6 +6,7 @@ import type { Application } from "@/lib/applications";
 import {
   recommendationFor,
   type ReviewResponse,
+  type ReviewResult,
   type RecommendationResult,
 } from "@/lib/matcher";
 import { FieldResultCard } from "@/components/FieldResultCard";
@@ -15,6 +16,7 @@ import {
   DISPOSITION_LABEL,
   type Disposition,
 } from "@/lib/dispositions";
+import { getVerdict, setVerdict } from "@/lib/verdicts";
 
 const APP_FIELDS: { key: keyof Application; label: string }[] = [
   { key: "brandName", label: "Brand name" },
@@ -25,32 +27,41 @@ const APP_FIELDS: { key: keyof Application; label: string }[] = [
   { key: "countryOfOrigin", label: "Country of origin" },
 ];
 
+/** The verification result the page renders — either freshly run or restored from a saved verdict. */
+type ShownResult = { review: ReviewResult; totalMs?: number; verifiedAt: number };
+
 export function ReviewClient({ app }: { app: Application }) {
-  const [review, setReview] = useState<ReviewResponse | null>(null);
+  const [result, setResult] = useState<ShownResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [disposition, setDispositionState] = useState<Disposition>("pending");
   const resultsRef = useRef<HTMLElement>(null);
+  // Only pull focus to the results after an explicit run — not when we restore a saved verdict on
+  // load, which would yank focus on every page open.
+  const focusAfterRun = useRef(false);
 
-  // Reset per-application view state whenever the route's application changes (defensive: the
-  // shipped UI only navigates review → queue → review, but this keeps a future
-  // "next application" link from showing one app's results under another's header).
+  // Restore per-application view state whenever the route's application changes: the human
+  // disposition and the last AI verdict (so reopening shows the prior result without re-running).
   useEffect(() => {
     setDispositionState(getDisposition(app.id));
-    setReview(null);
+    const saved = getVerdict(app.id);
+    setResult(saved ? { review: saved.review, totalMs: saved.totalMs, verifiedAt: saved.verifiedAt } : null);
     setError(null);
     setLoading(false);
   }, [app.id]);
 
-  // Move focus to the results once a verification returns (helps keyboard/low-vision users).
+  // Move focus to the results once a *fresh* verification returns (helps keyboard/low-vision users).
   useEffect(() => {
-    if (review) resultsRef.current?.focus();
-  }, [review]);
+    if (result && focusAfterRun.current) {
+      focusAfterRun.current = false;
+      resultsRef.current?.focus();
+    }
+  }, [result]);
 
   async function runVerification() {
     setLoading(true);
     setError(null);
-    setReview(null);
+    setResult(null);
     try {
       const imgRes = await fetch(app.labelImage);
       if (!imgRes.ok) {
@@ -71,7 +82,18 @@ export function ReviewClient({ app }: { app: Application }) {
       if (!res.ok) {
         setError(data.error || "Something went wrong while verifying the label.");
       } else {
-        setReview(data as ReviewResponse);
+        const payload = data as ReviewResponse;
+        const verifiedAt = Date.now();
+        focusAfterRun.current = true;
+        setResult({ review: payload.review, totalMs: payload.timing?.totalMs, verifiedAt });
+        // Persist so the queue's "AI check" column fills in and reopening restores this result.
+        setVerdict(app.id, {
+          recommendation: recommendationFor(payload.review),
+          review: payload.review,
+          verifiedAt,
+          totalMs: payload.timing?.totalMs,
+          model: payload.model,
+        });
       }
     } catch {
       setError("Could not reach the server. Please try again.");
@@ -85,7 +107,7 @@ export function ReviewClient({ app }: { app: Application }) {
     setDispositionState(value);
   }
 
-  const rec: RecommendationResult | null = review ? recommendationFor(review.review) : null;
+  const rec: RecommendationResult | null = result ? recommendationFor(result.review) : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-4 py-8 sm:py-10">
@@ -149,15 +171,20 @@ export function ReviewClient({ app }: { app: Application }) {
       </div>
 
       {/* Verify action */}
-      <div className="mt-6">
+      <div className="mt-6 flex flex-wrap items-center gap-3">
         <button
           onClick={runVerification}
           disabled={loading}
           className="rounded-xl bg-blue-700 px-6 py-3 text-base font-semibold text-white shadow-sm hover:bg-blue-800 focus:outline-none focus-visible:ring-4 focus-visible:ring-blue-500/50 disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-700"
           aria-busy={loading}
         >
-          {loading ? "Verifying label…" : review ? "Re-run AI verification" : "Run AI verification"}
+          {loading ? "Verifying label…" : result ? "Re-run AI verification" : "Run AI verification"}
         </button>
+        {result && !loading && (
+          <span className="text-sm text-neutral-500 dark:text-neutral-400">
+            Last verified {formatWhen(result.verifiedAt)}
+          </span>
+        )}
       </div>
 
       {/* Results */}
@@ -172,20 +199,20 @@ export function ReviewClient({ app }: { app: Application }) {
           </div>
         )}
 
-        {review && rec && (
+        {result && rec && (
           <section aria-labelledby="results" ref={resultsRef} tabIndex={-1} className="focus:outline-none">
             <RecommendationBanner rec={rec} />
 
             <h2 id="results" className="mt-6 mb-3 text-xl font-bold text-neutral-900 dark:text-neutral-50">
               Field-by-field
-              {typeof review.timing?.totalMs === "number" && (
+              {typeof result.totalMs === "number" && (
                 <span className="ml-2 text-sm font-normal text-neutral-400">
-                  analyzed in {(review.timing.totalMs / 1000).toFixed(1)}s
+                  analyzed in {(result.totalMs / 1000).toFixed(1)}s
                 </span>
               )}
             </h2>
             <ul className="space-y-3">
-              {review.review.fields.map((field) => (
+              {result.review.fields.map((field) => (
                 <FieldResultCard key={field.key} field={field} />
               ))}
             </ul>
@@ -235,6 +262,21 @@ export function ReviewClient({ app }: { app: Application }) {
       </div>
     </main>
   );
+}
+
+/** Compact relative-ish timestamp for "last verified". Falls back to a locale date for older runs. */
+function formatWhen(ts: number): string {
+  const diffSec = Math.round((Date.now() - ts) / 1000);
+  if (diffSec < 60) return "just now";
+  if (diffSec < 3600) {
+    const m = Math.floor(diffSec / 60);
+    return `${m} minute${m === 1 ? "" : "s"} ago`;
+  }
+  if (diffSec < 86400) {
+    const h = Math.floor(diffSec / 3600);
+    return `${h} hour${h === 1 ? "" : "s"} ago`;
+  }
+  return new Date(ts).toLocaleString();
 }
 
 function RecommendationBanner({ rec }: { rec: RecommendationResult }) {
