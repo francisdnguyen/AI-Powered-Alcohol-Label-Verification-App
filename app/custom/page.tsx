@@ -69,6 +69,10 @@ export default function Home() {
       setError("Please add a label photo first.");
       return;
     }
+    if (mode === "manual" && !manual.brandName?.trim()) {
+      setError('Enter at least the brand name to compare against, or choose "Just check the label itself".');
+      return;
+    }
     setLoading(true);
     setError(null);
     setResult(null);
@@ -224,30 +228,34 @@ export default function Home() {
               checked={mode === "manual"}
               onChange={() => setMode("manual")}
               title="Values I type in"
-              desc="Enter the expected values by hand."
+              desc="Start with the brand name; add more fields only if you want to compare them."
             />
             {mode === "manual" && (
-              <div className="ml-8 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {MANUAL_FIELDS.map((f) => (
-                  <div key={f.key}>
-                    <label
-                      htmlFor={f.key}
-                      className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
-                    >
-                      {f.label}
-                    </label>
-                    <input
-                      id={f.key}
-                      type="text"
-                      maxLength={300}
-                      value={manual[f.key] ?? ""}
-                      onChange={(e) =>
-                        setManual((m) => ({ ...m, [f.key]: e.target.value }))
-                      }
-                      className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
-                    />
+              <div className="ml-8 space-y-3">
+                {/* Brand leads — the primary anchor for a manual comparison. The rest stay tucked
+                    behind a disclosure so the form isn't a wall of inputs (progressive disclosure). */}
+                <ManualField
+                  fieldKey="brandName"
+                  label="Brand name (required)"
+                  value={manual.brandName ?? ""}
+                  onChange={(v) => setManual((m) => ({ ...m, brandName: v }))}
+                />
+                <details className="rounded-lg border border-neutral-200 dark:border-neutral-800">
+                  <summary className="cursor-pointer select-none px-3 py-2 text-sm font-medium text-blue-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400">
+                    Add more label details (optional)
+                  </summary>
+                  <div className="grid grid-cols-1 gap-3 p-3 pt-1 sm:grid-cols-2">
+                    {MANUAL_FIELDS.filter((f) => f.key !== "brandName").map((f) => (
+                      <ManualField
+                        key={f.key}
+                        fieldKey={f.key}
+                        label={f.label}
+                        value={manual[f.key] ?? ""}
+                        onChange={(v) => setManual((m) => ({ ...m, [f.key]: v }))}
+                      />
+                    ))}
                   </div>
-                ))}
+                </details>
               </div>
             )}
 
@@ -307,6 +315,37 @@ export default function Home() {
         )}
       </div>
     </main>
+  );
+}
+
+function ManualField({
+  fieldKey,
+  label,
+  value,
+  onChange,
+}: {
+  fieldKey: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div>
+      <label
+        htmlFor={fieldKey}
+        className="block text-sm font-medium text-neutral-700 dark:text-neutral-300"
+      >
+        {label}
+      </label>
+      <input
+        id={fieldKey}
+        type="text"
+        maxLength={300}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="mt-1 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100"
+      />
+    </div>
   );
 }
 
