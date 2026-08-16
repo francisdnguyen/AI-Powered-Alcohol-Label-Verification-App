@@ -50,6 +50,26 @@ This split is deliberate and does two things at once:
   approve everything") can at most corrupt a single transcribed field value. It can never flip a
   verdict, because the model isn't the judge.
 
+## Assumptions
+
+- **COLA data is mocked.** Pending COLA applications aren't public data with an API, so the queue is
+  seeded with synthetic records ([`lib/applications.ts`](lib/applications.ts)) standing in for a real
+  COLA source — production would swap in a real adapter.
+- **US TTB scope.** Targets US TTB / COLA labels: the seven mandatory fields and the verbatim
+  27 CFR 16.21 government warning are US-specific.
+- **Synthetic labels for the demo.** The sample labels are clean generated text, not phone photos,
+  so the pipeline can be demoed and *measured* (see the eval) without a real photo corpus. Real
+  photos (angle, glare, low light) read less accurately — which is why extraction reports per-field
+  confidence, an overall image-quality read, and routes shaky reads to human review.
+- **Cloud vision is acceptable for a prototype.** Uses a cloud model (Claude) under the brief's
+  "relaxed prototype constraints," despite the IT stakeholder's firewall note; production would
+  allowlist the endpoint or run a local / Azure-hosted model.
+- **Prototype-scale persistence.** Single-agent scope: dispositions and AI verdicts persist in the
+  browser (localStorage) and app / rate-limit state is in-memory. Production needs a shared, durable,
+  tamper-evident store.
+- **Human-in-the-loop.** An agent makes the final call — the AI verdict is advisory, and the tool
+  never auto-approves or auto-rejects a filing.
+
 ## How grading works
 
 - **Government warning** — matched **verbatim** against the canonical 27 CFR 16.21 text
