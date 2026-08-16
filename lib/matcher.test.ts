@@ -119,6 +119,12 @@ describe("parseVolumeMl", () => {
   it("parses fluid ounces", () => {
     expect(parseVolumeMl("12 fl oz")).toBeCloseTo(354.88, 1);
   });
+  it("treats the EU ℮ estimated sign as the same amount (spaced, char, or collapsed 'e')", () => {
+    expect(parseVolumeMl("700 mL ℮")).toBe(700);
+    expect(parseVolumeMl("700 mL℮")).toBe(700);
+    expect(parseVolumeMl("700 mLe")).toBe(700);
+    expect(parseVolumeMl("70 cle")).toBe(700);
+  });
   it("returns null for junk", () => {
     expect(parseVolumeMl("a bottle")).toBeNull();
   });

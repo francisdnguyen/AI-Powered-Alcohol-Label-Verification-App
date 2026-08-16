@@ -142,8 +142,11 @@ export function parseVolumeMl(s: string): number | null {
     .replace(/\bfluid\s+ounces?\b/g, "floz")
     .replace(/\bmillilit(?:er|re)s?\b/g, "ml")
     .replace(/\bcentilit(?:er|re)s?\b/g, "cl")
-    .replace(/\blit(?:er|re)s?\b/g, "l");
-  const m = t.match(/(\d+(?:\.\d+)?)\s*(floz|ml|cl|l)\b/);
+    .replace(/\blit(?:er|re)s?\b/g, "l")
+    .replace(/℮/g, ""); // EU estimated-quantity sign — a marking, not part of the amount.
+  // Allow an optional trailing "e" right after the unit ("700 mLe"): that's the ℮ estimated sign
+  // collapsed into a letter during transcription, not a different unit.
+  const m = t.match(/(\d+(?:\.\d+)?)\s*(floz|ml|cl|l)e?\b/);
   if (!m) return null;
   const factor = UNIT_TO_ML[m[2]];
   if (!factor) return null;
