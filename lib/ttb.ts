@@ -1,18 +1,16 @@
 /**
- * The federally mandated Alcoholic Beverage Health Warning Statement.
+ * The federally mandated Alcoholic Beverage Health Warning Statement (27 CFR 16.21).
  *
- * Source: 27 CFR 16.21. The wording, order, and the literal "GOVERNMENT WARNING:"
- * prefix (which must appear in capital letters and bold on the label) are fixed by
- * regulation. Junior agents check this VERBATIM — this constant is our source of truth.
+ * Stored in ALL CAPITAL LETTERS: the statement is required on the label in all caps (with
+ * "GOVERNMENT WARNING" additionally in bold type). We grade the transcription against this canonical
+ * all-caps text VERBATIM — a warning with the right wording but not in all caps is flagged. This
+ * constant is our single source of truth.
  *
- * NOTE (limitation): from a transcription we can verify the exact wording and
- * capitalization, but NOT the required bold typeface. That gap is documented for
- * the reviewing agent rather than silently assumed.
- *
- * Source: 27 CFR 16.21 — reproduced verbatim (character-for-character).
+ * NOTE (limitation): a transcription can verify the exact wording and the ALL-CAPS casing, but NOT
+ * the required bold typeface — that gap is surfaced for the reviewing agent, not silently assumed.
  */
 export const TTB_GOVERNMENT_WARNING =
-  "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.";
+  "GOVERNMENT WARNING: (1) ACCORDING TO THE SURGEON GENERAL, WOMEN SHOULD NOT DRINK ALCOHOLIC BEVERAGES DURING PREGNANCY BECAUSE OF THE RISK OF BIRTH DEFECTS. (2) CONSUMPTION OF ALCOHOLIC BEVERAGES IMPAIRS YOUR ABILITY TO DRIVE A CAR OR OPERATE MACHINERY, AND MAY CAUSE HEALTH PROBLEMS.";
 
 /** The mandated prefix, which must be in caps + bold on the label. */
 export const TTB_WARNING_PREFIX = "GOVERNMENT WARNING:";

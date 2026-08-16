@@ -84,6 +84,12 @@ batch keeps drag-and-drop. Government-warning verbatim matches now flag that bol
 visual check (Jenny's requirement). Nav is Queue + Check labels. Backend unchanged; `next build` +
 61/61 vitest green; adaptive single/batch switch verified live at zero API cost._
 
+_Follow-up — all-caps government warning:_ the canonical warning (`lib/ttb.ts`) is now held in ALL
+CAPITAL LETTERS and the whole statement is graded that way — correct wording that isn't all-caps is
+flagged specifically ("must be printed in ALL CAPITAL LETTERS"), matching TTB label practice. Sample
+labels regenerated in all-caps (`scripts/make-sample-labels.mjs` + `ground-truth.json`); bold still
+can't be verified from a photo so it's flagged for visual confirmation. +1 matcher test.
+
 ## Step 10 — Image-quality outcome  ☑
 Extraction self-reports overall `imageQuality` (clear/partial/poor); a **poor** read becomes its own
 "Needs a clearer photo" recommendation (new `image` level, top precedence) so an unreadable photo is

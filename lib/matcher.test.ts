@@ -145,10 +145,18 @@ describe("government warning", () => {
     expect(note.toLowerCase()).toContain("bold");
     expect(note.toLowerCase()).toContain("visually");
   });
+  it("flags correct wording that is not in all capital letters", () => {
+    const mixedCase =
+      "GOVERNMENT WARNING: (1) According to the Surgeon General, women should not drink alcoholic beverages during pregnancy because of the risk of birth defects. (2) Consumption of alcoholic beverages impairs your ability to drive a car or operate machinery, and may cause health problems.";
+    const r = reviewLabel(buildLabel({ governmentWarning: field(mixedCase) }), silverCreekApp);
+    expect(statusOf(r, "governmentWarning")).toBe("mismatch");
+    const note = r.fields.find((x) => x.key === "governmentWarning")?.note ?? "";
+    expect(note.toLowerCase()).toContain("capital letters");
+  });
   it("flags altered wording as mismatch", () => {
     const altered = TTB_GOVERNMENT_WARNING.replace(
-      "birth defects",
-      "birth complications",
+      "BIRTH DEFECTS",
+      "BIRTH COMPLICATIONS",
     );
     const r = reviewLabel(
       buildLabel({ governmentWarning: field(altered) }),

@@ -358,17 +358,24 @@ function gradeVolume(extracted: string, expected: string): Verdict {
 
 function gradeGovernmentWarning(extracted: string): Verdict {
   const got = tightenWhitespace(extracted);
-  const want = tightenWhitespace(TTB_GOVERNMENT_WARNING);
+  const want = tightenWhitespace(TTB_GOVERNMENT_WARNING); // canonical, ALL CAPS
   if (got === want) {
-    // Text + capitalization are verified verbatim. The one thing a photo transcription can't
+    // Wording + ALL-CAPS casing are verified verbatim. The one thing a photo transcription can't
     // confirm is the required bold typeface, so ask the agent to eyeball that rather than letting
     // the app imply a fully-verified warning.
     return {
       status: "match",
-      note: "Text and capitalization match verbatim. Bold typeface can't be verified from a photo — confirm it visually.",
+      note: "Exact wording and ALL CAPS verified. Bold typeface can't be confirmed from a photo — check it visually.",
     };
   }
-  if (!got.startsWith(TTB_WARNING_PREFIX)) {
+  // Right wording but not in all capitals — a distinct, actionable flag (TTB requires all caps).
+  if (got.toUpperCase() === want) {
+    return {
+      status: "mismatch",
+      note: "Wording is correct, but the statement must be printed in ALL CAPITAL LETTERS.",
+    };
+  }
+  if (!got.toUpperCase().startsWith(TTB_WARNING_PREFIX)) {
     return {
       status: "mismatch",
       note: 'Warning must begin exactly with "GOVERNMENT WARNING:" — it does not.',

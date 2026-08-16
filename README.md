@@ -72,11 +72,12 @@ This split is deliberate and does two things at once:
 
 ## How grading works
 
-- **Government warning** — matched **verbatim** against the canonical 27 CFR 16.21 text
-  ([`lib/ttb.ts`](lib/ttb.ts)). Any wording or capitalization deviation is flagged. *Known limit:
-  a photo transcription can verify the exact text and caps, but not the required **bold** typeface —
-  so a verbatim match explicitly asks the agent to confirm the bold weight visually rather than
-  implying a fully-verified warning.*
+- **Government warning** — matched **verbatim** against the canonical 27 CFR 16.21 text, which is
+  held in **ALL CAPITAL LETTERS** ([`lib/ttb.ts`](lib/ttb.ts)). Any wording deviation is flagged, and
+  a warning with the right wording but **not in all caps** is called out specifically ("must be
+  printed in ALL CAPITAL LETTERS"). *Known limit: a photo transcription can verify the exact text and
+  its all-caps casing, but not the required **bold** typeface — so a verbatim match explicitly asks
+  the agent to confirm the bold weight visually rather than implying a fully-verified warning.*
 - **Alcohol content** — parsed to a number and compared with tolerance, so "40% ALC/VOL" and
   "40% ABV" match, but 40% vs 45% is flagged.
 - **Net contents** — unit-aware ("750 mL" == "750ML", "1 L" == "1000 mL").

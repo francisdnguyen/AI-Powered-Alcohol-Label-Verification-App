@@ -117,8 +117,10 @@ a "Low photo quality" pill in the queue / bulk verify. Verified live: a heavily 
    (each label on its own), `application` (all files vs one filing), and `queue` (each file paired
    with its own `applicationId` — the queue's bulk verify). All three run through the same
    synchronous chunk path.
-5. **Government warning is matched verbatim** (strict); other fields tolerant-normalized. A
-   photo cannot verify **bold** formatting — known, documented limit.
+5. **Government warning is matched verbatim in ALL CAPITAL LETTERS** (strict — canonical in
+   `lib/ttb.ts` is all-caps; correct wording that isn't all-caps is flagged "must be ALL CAPITAL
+   LETTERS"); other fields tolerant-normalized. A photo cannot verify **bold** formatting — known,
+   documented limit (surfaced for visual confirmation).
 6. **Latency budget ~5s**, dominated by the single Haiku vision call. Measured and surfaced,
    not asserted.
 7. **Claude spend is controlled at the account level** (Anthropic Console usage limits), NOT in
