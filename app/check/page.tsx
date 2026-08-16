@@ -5,6 +5,7 @@ import type { BeverageCategory, ReviewMode, ReviewResponse } from "@/lib/matcher
 import type { BatchFileResult } from "@/lib/batch";
 import { downscaleImage, chunkFiles } from "@/lib/imageClient";
 import { CHUNK_MAX_BYTES, CHUNK_MAX_COUNT } from "@/lib/batchLimits";
+import { setDisposition } from "@/lib/dispositions";
 import { FieldResultCard } from "@/components/FieldResultCard";
 import type { ApplicationSummary } from "@/lib/applications";
 
@@ -114,6 +115,9 @@ export default function CheckPage() {
   // Agent decisions per result, keyed per label. Session-local: ad-hoc uploads aren't queue filings,
   // so these aren't written to the queue's disposition store (that lives on /review/[id]).
   const [decisions, setDecisions] = useState<Record<string, Decision>>({});
+  // The filing the *single* check was actually run against (application mode only). Non-null here is
+  // what lets a submitted single decision write through to the queue's disposition store.
+  const [checkedApplicationId, setCheckedApplicationId] = useState<string | null>(null);
   function updateDecision(key: string, patch: Partial<Decision>) {
     setDecisions((prev) => {
       const base: Decision = prev[key] ?? { choice: null, note: "", submitted: false };
@@ -159,6 +163,7 @@ export default function CheckPage() {
     setTotal(0);
     setError(null);
     setDecisions({});
+    setCheckedApplicationId(null);
     if (list && list.length > 0 && picked.length === 0) {
       setError("Please choose image files (JPEG, PNG, or WebP).");
       setFiles([]);
@@ -211,6 +216,7 @@ export default function CheckPage() {
     setError(null);
     setResult(null);
     setDecisions({});
+    setCheckedApplicationId(null);
 
     // Shrink large photos in the browser so a multi-MB phone image doesn't hit Vercel's ~4.5 MB
     // request-body limit. Small images pass through untouched; downscaleImage never throws.
@@ -230,7 +236,11 @@ export default function CheckPage() {
       const res = await fetch("/api/review", { method: "POST", body: fd });
       const data = await res.json();
       if (!res.ok) setError(data.error || "Something went wrong while analyzing the label.");
-      else setResult(data as ReviewResponse);
+      else {
+        setResult(data as ReviewResponse);
+        // Remember the filing this check was run against, so a decision can update the queue.
+        setCheckedApplicationId(mode === "application" && applicationId ? applicationId : null);
+      }
     } catch {
       setError("Could not reach the server. Check your connection and try again.");
     } finally {
@@ -244,6 +254,7 @@ export default function CheckPage() {
     setBatchResults([]);
     setTotal(0);
     setDecisions({});
+    setCheckedApplicationId(null);
 
     try {
       // 1. Shrink images in the browser so large photos fit the request-body limit.
@@ -550,7 +561,18 @@ export default function CheckPage() {
             </ul>
             <DecisionPanel
               value={decisions[singleKey]}
-              onChange={(patch) => updateDecision(singleKey, patch)}
+              onChange={(patch) => {
+                updateDecision(singleKey, patch);
+                // Single application-mode only: writing the decision through updates the filing's
+                // status in the queue's disposition store (fires ttb-dispositions-changed).
+                if (patch.submitted && checkedApplicationId) {
+                  const choice = patch.choice ?? decisions[singleKey]?.choice;
+                  if (choice) setDisposition(checkedApplicationId, choice);
+                }
+              }}
+              queueLabel={
+                checkedApplicationId ? "Saved to the queue — this filing's status was updated." : undefined
+              }
             />
           </section>
         )}
@@ -805,9 +827,12 @@ function BatchRow({
 function DecisionPanel({
   value,
   onChange,
+  queueLabel,
 }: {
   value?: Decision;
   onChange: (patch: Partial<Decision>) => void;
+  /** When set, shown after submit to confirm the decision also updated a queue filing. */
+  queueLabel?: string;
 }) {
   const d = value ?? { choice: null, note: "", submitted: false };
 
@@ -820,6 +845,9 @@ function DecisionPanel({
         </p>
         {d.note.trim() && (
           <p className="mt-1 text-sm italic text-neutral-600 dark:text-neutral-400">“{d.note.trim()}”</p>
+        )}
+        {queueLabel && (
+          <p className="mt-1 text-xs font-medium text-green-700 dark:text-green-400">{queueLabel}</p>
         )}
         <button
           type="button"

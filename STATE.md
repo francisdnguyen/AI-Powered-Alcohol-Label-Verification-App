@@ -157,7 +157,11 @@ a "Low photo quality" pill in the queue / bulk verify. Verified live: a heavily 
 - App: `app/page.tsx` (**review queue** console), `app/review/[id]/page.tsx` (+ `ReviewClient.tsx`,
   the per-application review + verify + disposition), `app/check/page.tsx` (**one adaptive ad-hoc
   page** — file count picks the flow: one photo → single detailed check via `/api/review`; several →
-  batch via chunked `/api/batch`; replaced the separate `/custom` + `/batch` pages),
+  batch via chunked `/api/batch`; replaced the separate `/custom` + `/batch` pages). Each result
+  carries an Approve / Flag for Review / Reject decision panel (+ note) — session-local, **except a
+  single check run against a submitted application, whose decision writes through to the queue's
+  `dispositions.ts` store** (Approve→approved, Flag→needs-info, Reject→rejected) so the queue row and
+  tabs update. Self/manual/batch decisions stay session-local (no filing to write to).
   `app/layout.tsx` (nav: Queue + Check labels), `app/globals.css`, API routes
   `app/api/{review,extract,batch,applications}/route.ts`, `components/FieldResultCard.tsx`,
   `components/icons.tsx` (dependency-free inline SVGs for the stat-tile/priority/search glyphs).
