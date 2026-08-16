@@ -31,6 +31,41 @@ const CHUNK_CONCURRENCY = 3;
 
 type BatchMode = "self" | "application";
 
+/** An agent's recorded call on a checked label. Session-local on this ad-hoc page. */
+type DecisionChoice = "approved" | "needs-info" | "rejected";
+interface Decision {
+  choice: DecisionChoice | null;
+  note: string;
+  submitted: boolean;
+}
+
+const DECISION_META: Record<
+  DecisionChoice,
+  { button: string; recorded: string; activeClass: string; idleClass: string; pill: string }
+> = {
+  approved: {
+    button: "✓ Approve",
+    recorded: "Approved",
+    activeClass: "bg-green-700 text-white",
+    idleClass: "border border-green-600 text-green-700 hover:bg-green-50 dark:text-green-400 dark:hover:bg-green-950/40",
+    pill: "bg-green-700 text-white",
+  },
+  "needs-info": {
+    button: "Flag for Review",
+    recorded: "Flagged for review",
+    activeClass: "bg-amber-500 text-black",
+    idleClass: "border border-amber-500 text-amber-700 hover:bg-amber-50 dark:text-amber-400 dark:hover:bg-amber-950/40",
+    pill: "bg-amber-500 text-black",
+  },
+  rejected: {
+    button: "✕ Reject",
+    recorded: "Rejected",
+    activeClass: "bg-red-700 text-white",
+    idleClass: "border border-red-600 text-red-700 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/40",
+    pill: "bg-red-700 text-white",
+  },
+};
+
 /** Run `worker` over items with at most `limit` in flight; returns results in order. */
 async function mapPool<T, R>(
   items: T[],
@@ -76,6 +111,16 @@ export default function CheckPage() {
   const [error, setError] = useState<string | null>(null);
   const resultsRef = useRef<HTMLDivElement>(null);
 
+  // Agent decisions per result, keyed per label. Session-local: ad-hoc uploads aren't queue filings,
+  // so these aren't written to the queue's disposition store (that lives on /review/[id]).
+  const [decisions, setDecisions] = useState<Record<string, Decision>>({});
+  function updateDecision(key: string, patch: Partial<Decision>) {
+    setDecisions((prev) => {
+      const base: Decision = prev[key] ?? { choice: null, note: "", submitted: false };
+      return { ...prev, [key]: { ...base, ...patch } };
+    });
+  }
+
   const isBatch = files.length > 1;
 
   useEffect(() => {
@@ -113,6 +158,7 @@ export default function CheckPage() {
     setBatchResults([]);
     setTotal(0);
     setError(null);
+    setDecisions({});
     if (list && list.length > 0 && picked.length === 0) {
       setError("Please choose image files (JPEG, PNG, or WebP).");
       setFiles([]);
@@ -164,6 +210,7 @@ export default function CheckPage() {
     setBusy(true);
     setError(null);
     setResult(null);
+    setDecisions({});
 
     // Shrink large photos in the browser so a multi-MB phone image doesn't hit Vercel's ~4.5 MB
     // request-body limit. Small images pass through untouched; downscaleImage never throws.
@@ -196,6 +243,7 @@ export default function CheckPage() {
     setError(null);
     setBatchResults([]);
     setTotal(0);
+    setDecisions({});
 
     try {
       // 1. Shrink images in the browser so large photos fit the request-body limit.
@@ -251,6 +299,7 @@ export default function CheckPage() {
 
   const seconds = result ? (result.timing.totalMs / 1000).toFixed(1) : null;
   const doneCount = batchResults.filter((f) => f.status === "done" || f.status === "error").length;
+  const singleKey = `single:${files[0]?.name ?? "label"}`;
 
   return (
     <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-12">
@@ -499,6 +548,10 @@ export default function CheckPage() {
                 <FieldResultCard key={f.key} field={f} />
               ))}
             </ul>
+            <DecisionPanel
+              value={decisions[singleKey]}
+              onChange={(patch) => updateDecision(singleKey, patch)}
+            />
           </section>
         )}
 
@@ -513,9 +566,17 @@ export default function CheckPage() {
               </p>
             </div>
             <ul className="mt-4 space-y-3">
-              {batchResults.map((f) => (
-                <BatchRow key={f.index} file={f} />
-              ))}
+              {batchResults.map((f) => {
+                const key = `batch:${f.index}:${f.filename}`;
+                return (
+                  <BatchRow
+                    key={f.index}
+                    file={f}
+                    decision={decisions[key]}
+                    onDecisionChange={(patch) => updateDecision(key, patch)}
+                  />
+                );
+              })}
             </ul>
           </section>
         )}
@@ -677,16 +738,32 @@ function OverallBanner({ result }: { result: ReviewResponse }) {
   );
 }
 
-function BatchRow({ file }: { file: BatchFileResult }) {
+function BatchRow({
+  file,
+  decision,
+  onDecisionChange,
+}: {
+  file: BatchFileResult;
+  decision?: Decision;
+  onDecisionChange: (patch: Partial<Decision>) => void;
+}) {
   const flagged = file.review
     ? file.review.summary.mismatch + file.review.summary.missing + file.review.summary.review
     : 0;
+  const decided = decision?.submitted && decision.choice ? decision.choice : null;
 
   return (
     <li className="rounded-lg border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-neutral-900">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <span className="font-medium text-neutral-900 dark:text-neutral-100">{file.filename}</span>
-        <BatchStatus file={file} />
+        <span className="flex items-center gap-2">
+          {decided && (
+            <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${DECISION_META[decided].pill}`}>
+              {DECISION_META[decided].recorded}
+            </span>
+          )}
+          <BatchStatus file={file} />
+        </span>
       </div>
 
       {file.status === "error" && (
@@ -713,9 +790,89 @@ function BatchRow({ file }: { file: BatchFileResult }) {
               ))}
             </ul>
           </details>
+          <DecisionPanel value={decision} onChange={onDecisionChange} />
         </>
       )}
     </li>
+  );
+}
+
+/**
+ * Approve / Flag for Review / Reject with an optional note, then Submit. Session-local — records the
+ * agent's call for this result without writing to the queue's filing dispositions. Once submitted it
+ * collapses to a recorded banner with an Edit affordance.
+ */
+function DecisionPanel({
+  value,
+  onChange,
+}: {
+  value?: Decision;
+  onChange: (patch: Partial<Decision>) => void;
+}) {
+  const d = value ?? { choice: null, note: "", submitted: false };
+
+  if (d.submitted && d.choice) {
+    const meta = DECISION_META[d.choice];
+    return (
+      <div className="mt-4 rounded-xl border border-black/10 bg-neutral-50 p-4 dark:border-white/10 dark:bg-neutral-900">
+        <p className="text-sm text-neutral-800 dark:text-neutral-200">
+          <span className="font-semibold">Decision recorded:</span> {meta.recorded}
+        </p>
+        {d.note.trim() && (
+          <p className="mt-1 text-sm italic text-neutral-600 dark:text-neutral-400">“{d.note.trim()}”</p>
+        )}
+        <button
+          type="button"
+          onClick={() => onChange({ submitted: false })}
+          className="mt-2 rounded text-sm font-medium text-blue-700 underline underline-offset-2 hover:text-blue-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:text-blue-400"
+        >
+          Edit decision
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-black/10 bg-neutral-50 p-4 dark:border-white/10 dark:bg-neutral-900">
+      <h3 className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">Record your decision</h3>
+      <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">Recorded for this session.</p>
+      <div className="flex flex-wrap gap-2">
+        {(["approved", "needs-info", "rejected"] as DecisionChoice[]).map((c) => {
+          const meta = DECISION_META[c];
+          const active = d.choice === c;
+          return (
+            <button
+              key={c}
+              type="button"
+              aria-pressed={active}
+              onClick={() => onChange({ choice: c })}
+              className={`rounded-lg px-4 py-2 text-sm font-semibold focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                active ? meta.activeClass : meta.idleClass
+              }`}
+            >
+              {meta.button}
+            </button>
+          );
+        })}
+      </div>
+      <textarea
+        value={d.note}
+        onChange={(e) => onChange({ note: e.target.value })}
+        placeholder="Add a note (optional)"
+        aria-label="Decision note"
+        rows={2}
+        maxLength={500}
+        className="mt-3 w-full rounded-lg border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-blue-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
+      />
+      <button
+        type="button"
+        disabled={!d.choice}
+        onClick={() => onChange({ submitted: true })}
+        className="mt-3 rounded-lg bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:bg-neutral-400 dark:disabled:bg-neutral-700"
+      >
+        Submit decision
+      </button>
+    </div>
   );
 }
 
